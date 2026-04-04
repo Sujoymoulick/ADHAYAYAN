@@ -59,7 +59,69 @@ export const useStore = create<AppState>()(
       isAuthLoading: true,
 
       init: async () => {
-        if (get().initialized) return;
+        // ALWAYS check for session, regardless of initialized flag
+        // This prevents the 'initialized: true' state from skipping the OAuth callback
+        try {
+          // 1. Setup Supabase Auth Listener & Session Check
+          const hasAuthFragment = window.location.hash.includes('access_token=') || 
+                                  window.location.search.includes('code=');
+          
+          if (hasAuthFragment) {
+            console.info('📡 Auth fragment detected, waiting for session resolution...');
+            let retries = 0;
+            while (retries < 4) {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                console.info('✅ Session resolved from URL hash!');
+                await get().loginWithOAuth({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+                  avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
+                });
+                break;
+              }
+              await new Promise(r => setTimeout(r, 500));
+              retries++;
+            }
+          } else if (!get().currentUser) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              await get().loginWithOAuth({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+                avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
+              });
+            }
+          }
+
+          // Setup Auth state listener (only once)
+          if (!get().initialized) {
+            supabase.auth.onAuthStateChange(async (event, session) => {
+              console.info(`🔐 Auth event triggered: ${event}`);
+              if (session?.user) {
+                const { user } = session;
+                await get().loginWithOAuth({
+                  id: user.id,
+                  email: user.email || '',
+                  name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
+                  avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+                });
+              } else if (event === 'SIGNED_OUT') {
+                set({ currentUser: null });
+              }
+            });
+          }
+
+        } catch (err) {
+          console.error('Auth initialization failed:', err);
+        }
+
+        if (get().initialized) {
+          set({ isAuthLoading: false });
+          return;
+        }
         
         console.info('🛠️ Initializing Adhyayan Store...');
         try {
@@ -78,65 +140,6 @@ export const useStore = create<AppState>()(
               initialized: true 
             });
           }
-        } catch (err) {
-          console.error('Failed to fetch initial data:', err);
-          // Still mark as initialized to avoid loops
-          set({ initialized: true });
-        }
-
-        try {
-          // 2. Setup Supabase Auth Listener
-          // Explicitly check for session and wait if we see an auth fragment in the URL
-          const hasAuthFragment = window.location.hash.includes('access_token=') || 
-                                  window.location.search.includes('code=');
-          
-          if (hasAuthFragment) {
-            console.info('📡 Auth fragment detected, waiting for session resolution...');
-            // Wait up to 2 seconds for onAuthStateChange to pick up the hash
-            let retries = 0;
-            while (retries < 4) {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.user) {
-                console.info('✅ Session resolved from URL hash!');
-                await get().loginWithOAuth({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-                  avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
-                });
-                break;
-              }
-              await new Promise(r => setTimeout(r, 500));
-              retries++;
-            }
-          } else {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              await get().loginWithOAuth({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-                avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
-              });
-            }
-          }
-          
-          set({ isAuthLoading: false });
-
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            console.info(`🔐 Auth event triggered: ${event}`);
-            if (session?.user) {
-              const { user } = session;
-              await get().loginWithOAuth({
-                id: user.id,
-                email: user.email || '',
-                name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
-                avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-              });
-            } else if (event === 'SIGNED_OUT') {
-              set({ currentUser: null });
-            }
-          });
 
           // 3. Setup Supabase Realtime Listeners
           const quizChannel = supabase
@@ -165,8 +168,10 @@ export const useStore = create<AppState>()(
             })
             .subscribe();
 
+          set({ isAuthLoading: false });
         } catch (err) {
           console.error('Failed to initialize store from server:', err);
+          set({ initialized: true, isAuthLoading: false });
         }
       },
 
