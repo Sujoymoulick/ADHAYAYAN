@@ -13,13 +13,14 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register, loginWithOAuth } = useStore();
+  const { currentUser, register, loginWithOAuth } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase handles auth callback/redirect automatically.
-    // The session is managed in useStore.ts via onAuthStateChange.
-  }, [navigate]);
+    if (currentUser) {
+      navigate('/', { replace: true });
+    }
+  }, [currentUser, navigate]);
 
   const handleSocialAuth = async (provider: string) => {
     setLoading(true);

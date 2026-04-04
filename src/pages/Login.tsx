@@ -25,13 +25,14 @@ export default function Login() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const otpRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-  const { login, loginWithOAuth, continueAsGuest, resetPassword, users } = useStore();
+  const { currentUser, login, loginWithOAuth, continueAsGuest, resetPassword, users } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase handles auth callback/redirect automatically.
-    // The session is managed in useStore.ts via onAuthStateChange.
-  }, [navigate]);
+    if (currentUser) {
+      navigate('/', { replace: true });
+    }
+  }, [currentUser, navigate]);
 
   const handleSocialAuth = async (provider: string) => {
     setLoading(true);
