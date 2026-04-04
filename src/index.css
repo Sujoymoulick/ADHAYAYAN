@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Syne:wght@600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-blue: #00f0ff;
+  --color-brand-coral: #ff4e00;
+  --color-brand-navy: #0a0f1c;
+}
+
+@layer base {
+  body {
+    @apply text-slate-50;
+    background: #0a0f1c;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display tracking-tight;
+  }
+
+  #galaxy-canvas {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    display: block;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-linear-to-r from-brand-blue to-brand-coral bg-clip-text text-transparent;
+  }
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+  }
+  .glow-coral {
+    box-shadow: 0 0 20px rgba(255, 78, 0, 0.3);
+  }
+  .card-dark {
+    @apply bg-slate-900 border border-slate-800 rounded-xl;
+  }
+}
