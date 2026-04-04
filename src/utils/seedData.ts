@@ -1141,6 +1141,67 @@ export const seedQuizzes: Quiz[] = [
       { id: 'q4', type: 'multiple-choice', text: 'What does E=mc^2 stand for?', options: ['Energy = mass x speed of light squared', 'Electricity = motion x current', 'Energy = momentum x constant', 'Equivalent = mass x carbon'], correctAnswer: 'Energy = mass x speed of light squared', points: 15, explanation: 'Einstein’s mass-energy equivalence formula is one of physics’ most famous.' },
       { id: 'q5', type: 'short-answer', text: 'What is the standard unit of force?', options: [], correctAnswer: 'Newton', points: 10, explanation: 'The Newton (N) is the SI unit of force.' }
     ]
+  },
+  {
+    id: 'quiz-39',
+    title: 'Quantum Mechanics in Computing',
+    description: 'Master the fundamental principles of quantum mechanics as they apply to next-generation computing systems.',
+    createdBy: 'user-1',
+    category: 'Tech',
+    difficulty: 'Hard',
+    timeLimit: 45,
+    coverImage: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=800',
+    tags: ['quantum', 'computing', 'physics', 'cs'],
+    createdAt: Date.now(),
+    attempts: 0,
+    rating: 0,
+    questions: [
+      {
+        id: 'q1',
+        type: 'multiple-choice',
+        text: 'Which quantum property allows a qubit to exist in multiple states simultaneously?',
+        options: ['Entanglement', 'Superposition', 'Interference', 'Tunneling'],
+        correctAnswer: 'Superposition',
+        points: 20,
+        explanation: 'Superposition is the ability of a quantum system to be in multiple states at the same time until it is measured.'
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        text: 'What is the phenomenon where two quantum particles become linked, regardless of distance?',
+        options: ['Decoherence', 'Superposition', 'Entanglement', 'Quantization'],
+        correctAnswer: 'Entanglement',
+        points: 20,
+        explanation: 'Entanglement is a physical phenomenon that occurs when a pair or group of particles is generated, interact, or share spatial proximity in a way such that the quantum state of each particle cannot be described independently of the state of the others.'
+      },
+      {
+        id: 'q3',
+        type: 'multiple-choice',
+        text: 'Which quantum gate is the equivalent of a NOT gate in classical computing?',
+        options: ['Hadamard Gate', 'Pauli-X Gate', 'Pauli-Z Gate', 'CNOT Gate'],
+        correctAnswer: 'Pauli-X Gate',
+        points: 20,
+        explanation: 'The Pauli-X gate acts on a single qubit and is the quantum equivalent of the NOT gate (flips |0> to |1> and vice versa).'
+      },
+      {
+        id: 'q4',
+        type: 'multiple-choice',
+        text: 'What term describes the loss of quantum information to the surrounding environment?',
+        options: ['Decoherence', 'Interference', 'Measurement Error', 'Quantum Noise'],
+        correctAnswer: 'Decoherence',
+        points: 20,
+        explanation: 'Quantum decoherence is the loss of quantum coherence, which is the process by which a quantum system loses its "quantumness" by interacting with its environment.'
+      },
+      {
+        id: 'q5',
+        type: 'multiple-choice',
+        text: 'Which algorithm demonstrated that quantum computers could factor large integers exponentially faster than classical algorithms?',
+        options: ["Grover's Algorithm", "Shor's Algorithm", "Deutsch-Jozsa Algorithm", "VQE"],
+        correctAnswer: "Shor's Algorithm",
+        points: 20,
+        explanation: "Shor's algorithm, formulated by Peter Shor in 1994, is a quantum algorithm for integer factorization."
+      }
+    ]
   }
 ];
 

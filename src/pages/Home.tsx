@@ -44,15 +44,13 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 tracking-tight">
-              Master Your Knowledge with <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-brand-blue to-brand-coral">
-                ADHYAYAN
-              </span>
+            <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 tracking-tight leading-tight">
+              Level Up Your Degree: <br className="hidden md:block" />
+              The Ultimate <span className="text-transparent bg-clip-text bg-linear-to-r from-brand-blue to-brand-coral">Gamified Learning</span> Ecosystem
             </h1>
-            <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-300 mb-10">
-              The ultimate platform to create, share, and conquer quizzes.
-              Challenge yourself, climb the leaderboard, and embrace the joy of learning.
+            <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-300 mb-10 leading-relaxed">
+              Master complex subjects with AI-powered notes and interactive quizzes while climbing the global leaderboard. 
+              Join thousands of students turning every study session into a high-score achievement.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

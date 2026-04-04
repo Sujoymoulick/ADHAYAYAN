@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from './store/useStore';
 import Navbar from './components/Navbar';
+import { AITutor } from './components/AITutor';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -144,6 +145,7 @@ export default function App() {
             </Routes>
           </OnboardingGuard>
         </main>
+        <AITutor />
       </div>
     </BrowserRouter>
   );

@@ -142,6 +142,61 @@ Rules:
       res.status(500).json({ error: 'Failed to generate questions. Please try again.' });
     }
   });
+  
+  // AI Tutor Chatbot 
+  app.post('/api/chat', async (req, res) => {
+    const { messages, userName } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
+    if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Messages are required' });
+
+    const systemPrompt = `You are the official AI tutor for Adhyayan, a gamified learning platform. Your goal is to help students understand complex topics in Computer Science and Engineering. 
+    
+    Guidelines:
+    1. Be encouraging and inspiring.
+    2. Use academic but accessible language.
+    3. Occasionally use gaming metaphors like "leveling up", "unlocking knowledge", or "completing a quest".
+    4. If a student (${userName || 'the student'}) asks about their notes, progress, or quizzes, remind them to check the "Lakshya" tracker for their daily goals.
+    5. Keep responses concise and focused on learning.
+    6. If the user asks something completely unrelated to education or CSE, politely redirect them back to their "learning quest".`;
+
+    try {
+      const chatHistory = messages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+
+      // Insert system prompt as the first message or use it in the generateContent
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              { role: 'user', parts: [{ text: systemPrompt }] },
+              { role: 'model', parts: [{ text: "Understood. I am the Adhyayan AI Tutor, ready to help students level up their CSE knowledge! How can I assist you on your learning quest today?" }] },
+              ...chatHistory
+            ],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Gemini Chat API error:', data);
+        return res.status(500).json({ error: data.error?.message || 'Gemini API error' });
+      }
+
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      res.json({ reply });
+    } catch (err: any) {
+      console.error('Chat error:', err);
+      res.status(500).json({ error: 'Failed to connect to the AI Tutor.' });
+    }
+  });
 
 
   app.get('/api/quizzes', async (req, res) => {
