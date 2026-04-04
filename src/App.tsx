@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import LoadingScreen from './components/LoadingScreen';
 import QuizDetails from './pages/QuizDetails';
+import AuthCallback from './pages/AuthCallback';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { currentUser, isAuthLoading } = useStore();
@@ -98,6 +99,7 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/explore" element={<Explore />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
