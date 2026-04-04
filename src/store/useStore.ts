@@ -14,6 +14,7 @@ interface AppState {
   scores: Score[];
   currentUser: User | null;
   initialized: boolean;
+  isAuthLoading: boolean;
 
   // Initialization
   init: () => Promise<void>;
@@ -48,6 +49,7 @@ export const useStore = create<AppState>()(
       scores: seedScores,
       currentUser: null,
       initialized: false,
+      isAuthLoading: true,
 
       init: async () => {
         if (get().initialized) return;
@@ -80,18 +82,20 @@ export const useStore = create<AppState>()(
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const { user } = session;
-            get().loginWithOAuth({
+            await get().loginWithOAuth({
               id: user.id,
               email: user.email || '',
               name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
               avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
             });
           }
+          
+          set({ isAuthLoading: false });
 
-          supabase.auth.onAuthStateChange((_event, session) => {
+          supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {
               const { user } = session;
-              get().loginWithOAuth({
+              await get().loginWithOAuth({
                 id: user.id,
                 email: user.email || '',
                 name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',

@@ -14,24 +14,30 @@ import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
+import LoadingScreen from './components/LoadingScreen';
 import QuizDetails from './pages/QuizDetails';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
-  const currentUser = useStore((state) => state.currentUser);
+  const { currentUser, isAuthLoading } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (currentUser && currentUser.isOnboarded === false && location.pathname !== '/onboarding') {
+    if (!isAuthLoading && currentUser && currentUser.isOnboarded === false && location.pathname !== '/onboarding') {
       navigate('/onboarding', { replace: true });
     }
-  }, [currentUser, location.pathname, navigate]);
+  }, [currentUser, isAuthLoading, location.pathname, navigate]);
+
+  if (isAuthLoading) return <LoadingScreen />;
 
   return <>{children}</>;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const currentUser = useStore((state) => state.currentUser);
+  const { currentUser, isAuthLoading } = useStore();
+  
+  if (isAuthLoading) return <LoadingScreen />;
+  
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
@@ -39,7 +45,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function HomeRedirect() {
-  const currentUser = useStore((state) => state.currentUser);
+  const { currentUser, isAuthLoading } = useStore();
+  
+  if (isAuthLoading) return <LoadingScreen />;
+  
   if (currentUser) {
     return <Navigate to="/dashboard" replace />;
   }
