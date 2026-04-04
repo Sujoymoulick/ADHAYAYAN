@@ -18,7 +18,7 @@ export default function Register() {
 
   useEffect(() => {
     if (currentUser) {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [currentUser, navigate]);
 

@@ -400,6 +400,39 @@ Rules:
     }
   });
 
+  // Sync User Profile (Upsert)
+  app.post('/api/user/sync', async (req, res) => {
+    try {
+      const { id, email, name, avatar } = req.body;
+      if (!id || !email) return res.status(400).json({ error: 'User ID and email are required' });
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .upsert({
+          id,
+          email,
+          name: name || email.split('@')[0],
+          avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+          last_login: new Date().toISOString()
+        }, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        user: {
+          ...snakeToCamel(profile),
+          createdAt: new Date(profile.created_at).getTime()
+        }
+      });
+    } catch (err) {
+      console.error('User sync error:', err);
+      res.status(500).json({ error: 'Failed to sync user profile' });
+    }
+  });
+
 
 
   // 6. Vite / Static Files (MUST BE LAST)

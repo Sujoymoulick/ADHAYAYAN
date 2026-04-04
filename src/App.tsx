@@ -12,6 +12,7 @@ import QuizAttempt from './pages/QuizAttempt';
 import Results from './pages/Results';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import QuizDetails from './pages/QuizDetails';
 
@@ -60,6 +61,11 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/explore" element={<Explore />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/onboarding" element={
                 <ProtectedRoute>
                   <Onboarding />

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useStore } from '../store/useStore';
-import { BrainCircuit, Compass, Trophy, PlusCircle, Star, Users, Play, Clock, BarChart, History } from 'lucide-react';
+import { BrainCircuit, Compass, Trophy, PlusCircle, Star, Users, Play, Clock, BarChart, History, LayoutDashboard } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function Home() {
@@ -55,10 +55,10 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/explore"
+                to={currentUser ? "/dashboard" : "/explore"}
                 className="w-full sm:w-auto px-8 py-4 rounded-full text-lg font-bold bg-brand-blue text-brand-navy hover:bg-brand-blue/90 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
               >
-                <Compass className="w-5 h-5" /> Explore Quizzes
+                {currentUser ? <LayoutDashboard className="w-5 h-5" /> : <Compass className="w-5 h-5" />} {currentUser ? "Go to Dashboard" : "Explore Quizzes"}
               </Link>
               <Link
                 to={currentUser ? "/create" : "/login"}

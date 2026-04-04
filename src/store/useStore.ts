@@ -21,7 +21,7 @@ interface AppState {
 
   // Auth & Profile
   login: (email: string, passwordHash: string) => boolean;
-  loginWithOAuth: (userData: { email: string; name: string; avatar: string }) => void;
+  loginWithOAuth: (userData: { id?: string; email: string; name: string; avatar: string }) => Promise<void>;
   resetPassword: (email: string, newPasswordHash: string) => boolean;
   register: (user: Omit<User, 'id' | 'createdAt' | 'badges'>) => boolean;
   logout: () => void;
@@ -73,6 +73,7 @@ export const useStore = create<AppState>()(
           if (session?.user) {
             const { user } = session;
             get().loginWithOAuth({
+              id: user.id,
               email: user.email || '',
               name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
               avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
@@ -83,6 +84,7 @@ export const useStore = create<AppState>()(
             if (session?.user) {
               const { user } = session;
               get().loginWithOAuth({
+                id: user.id,
                 email: user.email || '',
                 name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
                 avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
@@ -141,34 +143,42 @@ export const useStore = create<AppState>()(
         return false;
       },
 
-      loginWithOAuth: (userData) => {
-        const existingUser = get().users.find(u => u.email === userData.email);
-        if (existingUser) {
-          const updatedUser = {
-            ...existingUser,
-            avatar: userData.avatar || existingUser.avatar,
-            name: userData.name || existingUser.name
-          };
+      loginWithOAuth: async (userData) => {
+        try {
+          const res = await fetch('/api/user/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              avatar: userData.avatar
+            })
+          });
+          
+          if (!res.ok) throw new Error('Failed to sync user');
+          
+          const { user } = await res.json();
+          
           set(state => ({
-            users: state.users.map(u => u.id === existingUser.id ? updatedUser : u),
-            currentUser: updatedUser
+            currentUser: user,
+            users: state.users.some(u => u.id === user.id) 
+              ? state.users.map(u => u.id === user.id ? user : u)
+              : [...state.users, user]
           }));
-        } else {
+        } catch (err) {
+          console.error('OAuth sync failed:', err);
+          // Fallback to local-only if sync fails (offline mode)
           const newUser: User = {
-            name: userData.name,
-            email: userData.email,
+            ...userData,
             passwordHash: 'oauth_user',
-            avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email}`,
-            id: `u_${Date.now()}`,
+            id: userData.id || `u_${Date.now()}`,
             createdAt: Date.now(),
             badges: ['First Quiz'],
             bio: "Passionate Learner 🚀",
             isOnboarded: false
-          };
-          set(state => ({
-            users: [...state.users, newUser],
-            currentUser: newUser
-          }));
+          } as User;
+          set({ currentUser: newUser });
         }
       },
 
