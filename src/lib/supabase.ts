@@ -1,37 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Safe environment variable accessor for both Browser (Vite) and Node
-const getEnv = (key: string): string => {
-  // 1. Check Vite's import.meta.env first (Browser)
-  try {
-    const viteEnv = (import.meta as any).env;
-    if (viteEnv && viteEnv[key]) return viteEnv[key];
-  } catch (e) {
-    // Silence error, we'll try process.env next
-  }
+// Accessing environment variables with standardized Vite prefix
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || process?.env?.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process?.env?.VITE_SUPABASE_ANON_KEY || '';
 
-  // 2. Check Node's process.env (Server/Vercel Functions)
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key] || '';
-    }
-  } catch (e) {
-    // Silence error
-  }
-
-  return '';
-};
-
-const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
-const supabaseServiceRoleKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+// Backend-only key (Secure, Not for browser use)
+const supabaseServiceRoleKey = process?.env?.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ Supabase credentials missing! Authentication features will be disabled.');
+  console.warn('⚠️ Supabase credentials missing! (Expected VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)');
 }
 
-// Backend use (with service role for admin tasks)
-export const supabaseAdmin = (typeof process !== 'undefined' && supabaseServiceRoleKey) 
+// Backend use (with service role for admin tasks) - Only initialized if on server with key provided
+export const supabaseAdmin = (supabaseServiceRoleKey && supabaseUrl) 
   ? createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -41,4 +22,7 @@ export const supabaseAdmin = (typeof process !== 'undefined' && supabaseServiceR
   : null;
 
 // General use (with anon key)
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder');
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder'
+);
