@@ -35,23 +35,31 @@ export default function Login() {
   }, [currentUser, navigate]);
 
   const handleSocialAuth = async (provider: string) => {
+    // Advanced Diagnostic: Check if we have a valid Supabase URL
     if (!supabase || supabase.auth.getSession === undefined) {
-      setError('⚠️ Authentication service is disconnected. Please check environment variables.');
+      setError('⚠️ Infrastructure Error: Supabase client failed to initialize. Please check Vercel environment variables.');
+      console.error('Diagnostic Failure: supabaseUrl or supabaseAnonKey is placeholder.');
       return;
     }
+
     setLoading(true);
     if (provider === 'Google') {
       try {
+        console.info('📡 Initializing Google OAuth with redirect to /dashboard...');
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: `${window.location.origin}/dashboard`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
           },
         });
         if (error) throw error;
-      } catch (error) {
-        console.error('Login error:', error);
-        setError('Failed to initialize Google login.');
+      } catch (error: any) {
+        console.error('❌ Social Login Error:', error);
+        setError(`Failed to initialize Google login: ${error.message || 'Unknown Error'}`);
         setLoading(false);
       }
       return;

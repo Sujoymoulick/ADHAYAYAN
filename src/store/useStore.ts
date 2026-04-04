@@ -79,20 +79,45 @@ export const useStore = create<AppState>()(
 
         try {
           // 2. Setup Supabase Auth Listener
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const { user } = session;
-            await get().loginWithOAuth({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
-              avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-            });
+          // Explicitly check for session and wait if we see an auth fragment in the URL
+          const hasAuthFragment = window.location.hash.includes('access_token=') || 
+                                  window.location.search.includes('code=');
+          
+          if (hasAuthFragment) {
+            console.info('📡 Auth fragment detected, waiting for session resolution...');
+            // Wait up to 2 seconds for onAuthStateChange to pick up the hash
+            let retries = 0;
+            while (retries < 4) {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                console.info('✅ Session resolved from URL hash!');
+                await get().loginWithOAuth({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+                  avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
+                });
+                break;
+              }
+              await new Promise(r => setTimeout(r, 500));
+              retries++;
+            }
+          } else {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              await get().loginWithOAuth({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+                avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
+              });
+            }
           }
           
           set({ isAuthLoading: false });
 
-          supabase.auth.onAuthStateChange(async (_event, session) => {
+          supabase.auth.onAuthStateChange(async (event, session) => {
+            console.info(`🔐 Auth event triggered: ${event}`);
             if (session?.user) {
               const { user } = session;
               await get().loginWithOAuth({
@@ -101,7 +126,7 @@ export const useStore = create<AppState>()(
                 name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
                 avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
               });
-            } else {
+            } else if (event === 'SIGNED_OUT') {
               set({ currentUser: null });
             }
           });
