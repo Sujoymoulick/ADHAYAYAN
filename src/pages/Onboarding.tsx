@@ -12,7 +12,7 @@ export default function Onboarding() {
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
     const [profession, setProfession] = useState<string>('');
     const [interestedCategories, setInterestedCategories] = useState<string[]>([]);
-
+    const [isSaving, setIsSaving] = useState(false);
     const [customCategory, setCustomCategory] = useState('');
 
     const professions = ['Student', 'Teacher/Educator', 'Professional / Corporate', 'Hobbyist / Lifelong Learner', 'Other'];
@@ -33,19 +33,24 @@ export default function Onboarding() {
         }
     };
 
-    const handleComplete = () => {
+    const handleComplete = async () => {
         if (isFirstTimeUser === null || !profession || interestedCategories.length === 0) {
             alert("Please complete all sections to continue.");
             return;
         }
 
-        completeOnboarding({
-            isFirstTimeUser,
-            profession,
-            interestedCategories
-        });
-
-        navigate('/');
+        setIsSaving(true);
+        try {
+            await completeOnboarding({
+                isFirstTimeUser,
+                profession,
+                interestedCategories
+            });
+            navigate('/', { replace: true });
+        } catch (err) {
+            console.error('Failed to complete onboarding:', err);
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -191,10 +196,10 @@ export default function Onboarding() {
                 <div className="mt-12 pt-8 border-t border-white/10 flex justify-end">
                     <button
                         onClick={handleComplete}
-                        disabled={isFirstTimeUser === null || !profession || interestedCategories.length === 0}
+                        disabled={isSaving || isFirstTimeUser === null || !profession || interestedCategories.length === 0}
                         className="px-8 py-4 rounded-xl font-bold bg-brand-blue text-brand-navy hover:bg-brand-blue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                     >
-                        Get Started <ChevronRight className="w-5 h-5" />
+                        {isSaving ? "Saving..." : "Get Started"} <ChevronRight className={cn("w-5 h-5", isSaving && "animate-spin")} />
                     </button>
                 </div>
             </motion.div>
