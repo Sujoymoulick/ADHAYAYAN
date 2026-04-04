@@ -136,7 +136,6 @@ export default function App() {
             </Routes>
           </OnboardingGuard>
         </main>
-        <AITutor />
       </div>
     </BrowserRouter>
   );
