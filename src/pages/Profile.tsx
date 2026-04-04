@@ -79,11 +79,11 @@ export default function Profile() {
     const updatedUser = { ...currentUser, name: editName, bio: editBio, avatar: editAvatar };
 
     try {
-      setUser(updatedUser);
-      // Backend sync logic remains same...
+      await setUser(updatedUser);
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Update failed:", error);
+      alert("Failed to update profile. Please try again.");
     } finally {
       setIsUpdating(false);
     }
@@ -113,26 +113,26 @@ export default function Profile() {
         <div className="absolute top-0 left-0 w-full h-32 bg-linear-to-r from-brand-blue/20 to-brand-coral/20" />
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 pt-12">
           <div className="relative group">
-            <img src={currentUser.avatar} alt={currentUser.name} className="w-32 h-32 rounded-full border-4 border-slate-900 bg-slate-800 object-cover" />
+            <img src={editAvatar || currentUser.avatar} alt={currentUser.name} className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-slate-900 bg-slate-800 object-cover" />
             <button onClick={() => setIsEditModalOpen(true)} className="absolute bottom-0 right-0 p-2 bg-brand-blue rounded-full text-brand-navy hover:bg-brand-blue/90 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-3xl font-display font-bold text-white mb-1">{currentUser.name}</h1>
-            <p className="text-slate-300 mb-2 italic">{currentUser.bio || "Passionate Learner 🚀"}</p>
-            <p className="text-slate-400 flex items-center justify-center md:justify-start gap-2 text-sm">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1">{currentUser.name}</h1>
+            <p className="text-slate-300 mb-2 italic text-sm sm:text-base">{currentUser.bio || "Passionate Learner 🚀"}</p>
+            <p className="text-slate-400 flex items-center justify-center md:justify-start gap-2 text-xs sm:text-sm">
               <User className="w-4 h-4" /> {currentUser.email}
             </p>
           </div>
-          <div className="flex flex-wrap gap-4 mt-4 md:mt-0">
-            <button onClick={() => setIsEditModalOpen(true)} className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors font-medium flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 w-full md:w-auto">
+            <button onClick={() => setIsEditModalOpen(true)} className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base">
               <Edit3 className="w-4 h-4" /> Edit Profile
             </button>
             <button 
               onClick={handleMigration} 
               disabled={isMigrating}
-              className="px-6 py-3 rounded-xl bg-brand-blue/10 border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/20 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
+              className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-brand-blue/10 border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/20 transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
               title="If your quizzes or scores are missing, click this to restore them from your browser's memory."
             >
               {isMigrating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
@@ -143,13 +143,13 @@ export default function Profile() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/10 mb-8 overflow-x-auto">
+      <div className="flex border-b border-white/10 mb-8 overflow-x-auto no-scrollbar scrollbar-hide">
         {(['stats', 'created', 'history', 'reviews'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-6 py-4 font-medium text-sm transition-colors border-b-2 whitespace-nowrap capitalize",
+              "px-6 py-4 font-medium text-sm transition-colors border-b-2 whitespace-nowrap capitalize shrink-0 focus:outline-none",
               activeTab === tab ? "border-brand-blue text-brand-blue" : "border-transparent text-slate-400 hover:text-white"
             )}
           >

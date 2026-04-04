@@ -285,31 +285,31 @@ export default function CreateQuiz() {
   return (
     <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-white">
             {isEditing ? 'Edit Quiz' : 'Create New Quiz'}
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-slate-400 mt-1 text-sm">
             {isEditing ? 'Update your quiz details and questions.' : 'Design your quiz and share it with the world.'}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {!isEditing && (
             <button
               onClick={() => alert('Draft saved automatically!')}
-              className="px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors flex items-center gap-2 font-medium"
+              className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 font-medium text-sm"
             >
-              <Save className="w-4 h-4" /> Save Draft
+              <Save className="w-4 h-4" /> <span className="whitespace-nowrap">Save Draft</span>
             </button>
           )}
           <button
             onClick={handlePublish}
             disabled={isSaving}
-            className="px-6 py-2 rounded-lg bg-brand-blue text-brand-navy hover:bg-brand-blue/90 transition-colors flex items-center gap-2 font-bold disabled:opacity-50"
+            className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-brand-blue text-brand-navy hover:bg-brand-blue/90 transition-colors flex items-center justify-center gap-2 font-bold disabled:opacity-50 text-sm"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-            {isEditing ? 'Update Quiz' : 'Publish Quiz'}
+            <span className="whitespace-nowrap">{isEditing ? 'Update' : 'Publish'}</span>
           </button>
         </div>
       </div>
@@ -323,11 +323,11 @@ export default function CreateQuiz() {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-white/10 mb-8">
+      <div className="flex border-b border-white/10 mb-8 overflow-x-auto no-scrollbar scrollbar-hide">
         <button
           onClick={() => setActiveTab('details')}
           className={cn(
-            "px-6 py-3 font-medium text-sm transition-colors border-b-2",
+            "px-6 py-3 font-medium text-sm transition-colors border-b-2 shrink-0",
             activeTab === 'details' ? "border-brand-blue text-brand-blue" : "border-transparent text-slate-400 hover:text-white"
           )}
         >
@@ -336,7 +336,7 @@ export default function CreateQuiz() {
         <button
           onClick={() => setActiveTab('questions')}
           className={cn(
-            "px-6 py-3 font-medium text-sm transition-colors border-b-2",
+            "px-6 py-3 font-medium text-sm transition-colors border-b-2 shrink-0",
             activeTab === 'questions' ? "border-brand-blue text-brand-blue" : "border-transparent text-slate-400 hover:text-white"
           )}
         >
@@ -368,7 +368,7 @@ export default function CreateQuiz() {
                   className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-brand-blue focus:outline-none resize-none"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <select
                     value={category}

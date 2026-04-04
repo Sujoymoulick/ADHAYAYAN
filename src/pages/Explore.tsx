@@ -89,7 +89,7 @@ export default function Explore() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar pb-2 sm:pb-0">
             {categories.map((cat) => (
               <button
                 key={cat}

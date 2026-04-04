@@ -189,11 +189,19 @@ Rules:
 
   app.get('/api/quizzes', async (req, res) => {
     try {
-      const { data: quizzes, error } = await supabase
+      const { userId } = req.query;
+      
+      let query = supabase
         .from('quizzes')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
+        .select('*');
+        
+      if (userId) {
+        query = query.or(`is_public.eq.true,created_by.eq.${userId}`);
+      } else {
+        query = query.eq('is_public', true);
+      }
+      
+      const { data: quizzes, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -243,6 +251,34 @@ Rules:
     } catch (err) {
       console.error('Create quiz error:', err);
       res.status(500).json({ error: 'Failed to create quiz' });
+    }
+  });
+  
+  app.post('/api/quizzes/:id/attempt', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const { data: quiz, error: fetchError } = await supabase
+        .from('quizzes')
+        .select('attempts')
+        .eq('id', id)
+        .single();
+        
+      if (fetchError || !quiz) return res.status(404).json({ error: 'Quiz not found' });
+      
+      const { data: updatedQuiz, error: updateError } = await supabase
+        .from('quizzes')
+        .update({ attempts: (quiz.attempts || 0) + 1 })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (updateError) throw updateError;
+      
+      res.json({ success: true, attempts: updatedQuiz.attempts });
+    } catch (err) {
+      console.error('Increment attempt error:', err);
+      res.status(500).json({ error: 'Failed to increment attempt' });
     }
   });
 

@@ -44,10 +44,10 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-6"
+          className="flex flex-col md:flex-row md:items-start md:items-center justify-between gap-6"
         >
           <div>
-            <h1 className="text-4xl font-display font-bold text-white mb-2">
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">
               {greeting}, <span className="text-brand-blue">{currentUser.name}</span>!
             </h1>
             <p className="text-slate-400">Ready to continue your learning quest today?</p>
@@ -55,7 +55,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <Link
               to="/create"
-              className="px-6 py-3 rounded-xl bg-brand-blue text-brand-navy font-bold hover:bg-brand-blue/90 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-blue text-brand-navy font-bold hover:bg-brand-blue/90 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             >
               <PlusCircle className="w-5 h-5" /> Create Quiz
             </Link>
@@ -205,9 +205,13 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value, subValue, color }: { icon: React.ReactNode, label: string, value: string | number, subValue: string, color: string }) {
+function StatCard({ icon, label, value, subValue, color }: { icon: React.ReactNode, label: string, value: string | number, subValue: string, color: 'blue' | 'coral' | 'emerald' | 'amber' }) {
   return (
-    <div className="bg-slate-900/50 rounded-2xl border border-white/10 p-6 flex flex-col gap-4 relative overflow-hidden group hover:border-white/20 transition-all">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-slate-900/50 rounded-2xl border border-white/10 p-4 sm:p-6 flex flex-col gap-4 relative overflow-hidden group hover:border-white/20 transition-all"
+    >
       <div className={cn(
         "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
         color === 'blue' ? "bg-blue-500/10 text-blue-400" :
@@ -219,8 +223,8 @@ function StatCard({ icon, label, value, subValue, color }: { icon: React.ReactNo
       </div>
       <div>
         <p className="text-sm text-slate-500 font-medium mb-1 uppercase tracking-wider">{label}</p>
-        <div className="flex items-baseline gap-2">
-          <p className="text-3xl font-display font-bold text-white">{value}</p>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p className="text-2xl sm:text-3xl font-display font-bold text-white">{value}</p>
           <span className="text-[10px] text-slate-500 italic truncate">{subValue}</span>
         </div>
       </div>
@@ -232,6 +236,6 @@ function StatCard({ icon, label, value, subValue, color }: { icon: React.ReactNo
             color === 'emerald' ? "bg-emerald-500" :
               "bg-amber-500"
       )} />
-    </div>
+    </motion.div>
   );
 }

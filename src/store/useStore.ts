@@ -125,8 +125,9 @@ export const useStore = create<AppState>()(
         
         console.info('🛠️ Initializing Adhyayan Store...');
         try {
+          const { currentUser } = get();
           const [quizzesRes, scoresRes] = await Promise.all([
-            fetch('/api/quizzes'),
+            fetch(`/api/quizzes?userId=${currentUser?.id || ''}`),
             fetch('/api/scores')
           ]);
 
@@ -176,10 +177,38 @@ export const useStore = create<AppState>()(
       },
 
       // Profile Actions
-      setUser: (user) => set(state => ({
-        currentUser: user,
-        users: state.users.map(u => u.id === user.id ? user : u)
-      })),
+      setUser: async (user) => {
+        try {
+          const { currentUser } = get();
+          if (!currentUser) return;
+
+          const res = await fetch('/api/user/update', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              bio: user.bio,
+              avatar: user.avatar
+            })
+          });
+
+          if (!res.ok) throw new Error('Failed to update profile');
+          
+          const { user: updatedUser } = await res.json();
+          set(state => ({
+            currentUser: updatedUser,
+            users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u)
+          }));
+        } catch (err) {
+          console.error('Update profile failed:', err);
+          // Fallback to local update
+          set(state => ({
+            currentUser: user,
+            users: state.users.map(u => u.id === user.id ? user : u)
+          }));
+        }
+      },
 
       completeOnboarding: async (data) => {
         const currentUser = get().currentUser;
@@ -246,6 +275,13 @@ export const useStore = create<AppState>()(
               ? state.users.map(u => u.id === user.id ? user : u)
               : [...state.users, user]
           }));
+
+          // Fetch quizzes again with the user's ID
+          const quizzesRes = await fetch(`/api/quizzes?userId=${user.id}`);
+          if (quizzesRes.ok) {
+            const quizzes = await quizzesRes.json();
+            set({ quizzes });
+          }
         } catch (err) {
           console.error('❌ OAuth sync failed or timed out:', err);
           // Fallback to local-only if sync fails (offline mode)
@@ -341,10 +377,17 @@ export const useStore = create<AppState>()(
         }));
       },
 
-      incrementQuizAttempts: (id) => {
-        set(state => ({
-          quizzes: state.quizzes.map(q => (q.id === id || q._id === id) ? { ...q, attempts: (q.attempts || 0) + 1 } : q)
-        }));
+      incrementQuizAttempts: async (id) => {
+        try {
+          await fetch(`/api/quizzes/${id}/attempt`, { method: 'POST' });
+          // Local state will be updated by socket (if realtime is active)
+          // or we can do a local update here for immediate feedback
+          set(state => ({
+            quizzes: state.quizzes.map(q => (q.id === id || q._id === id) ? { ...q, attempts: (q.attempts || 0) + 1 } : q)
+          }));
+        } catch (err) {
+          console.error('Increment attempt failed:', err);
+        }
       },
 
       submitQuizRating: async (id, newRating, comment, userName) => {
@@ -367,8 +410,10 @@ export const useStore = create<AppState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...scoreData, userId: get().currentUser?.id || 'guest' })
           });
-          const newScore = await res.json();
-          set(state => ({ scores: [newScore, ...state.scores] }));
+          if (res.ok) {
+            const newScore = await res.json();
+            set(state => ({ scores: [newScore, ...state.scores] }));
+          }
         } catch (err) {
           console.error('Score submission failed:', err);
         }

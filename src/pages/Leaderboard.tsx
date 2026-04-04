@@ -60,13 +60,13 @@ export default function Leaderboard() {
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/10 w-full md:w-auto">
+        <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/10 w-full md:w-auto overflow-x-auto no-scrollbar scrollbar-hide">
           {(['all', 'week', 'today'] as const).map(filter => (
             <button
               key={filter}
               onClick={() => setTimeFilter(filter)}
               className={cn(
-                "flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-medium transition-all capitalize",
+                "flex-1 md:flex-none px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all capitalize whitespace-nowrap",
                 timeFilter === filter 
                   ? "bg-brand-blue text-brand-navy shadow-lg" 
                   : "text-slate-400 hover:text-white hover:bg-white/5"
