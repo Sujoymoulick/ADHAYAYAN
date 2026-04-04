@@ -64,11 +64,23 @@ function HomeRedirect() {
 }
 
 function StoreInitializer() {
-  const init = useStore(state => state.init);
+  const { init, currentUser, isAuthLoading, initialized } = useStore();
   
   useEffect(() => {
     init();
   }, [init]);
+
+  useEffect(() => {
+    if (initialized) {
+      console.info('🛡️ App Guard State:', { 
+        hasUser: !!currentUser, 
+        email: currentUser?.email,
+        isAuthLoading,
+        initialized,
+        path: window.location.pathname
+      });
+    }
+  }, [currentUser, isAuthLoading, initialized]);
 
   return null;
 }

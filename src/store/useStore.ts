@@ -59,44 +59,31 @@ export const useStore = create<AppState>()(
       isAuthLoading: true,
 
       init: async () => {
-        // ALWAYS check for session, regardless of initialized flag
-        // This prevents the 'initialized: true' state from skipping the OAuth callback
         try {
-          // 1. Setup Supabase Auth Listener & Session Check
-          const hasAuthFragment = window.location.hash.includes('access_token=') || 
-                                  window.location.search.includes('code=');
+          // 1. Initial State Setup
+          set({ isAuthLoading: true });
+          console.info('📡 Initializing Adhyayan Store...');
+
+          // 2. Definitive Session Check (Handles Hash/Code Redirects Automatically)
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
-          if (hasAuthFragment) {
-            console.info('📡 Auth fragment detected, waiting for session resolution...');
-            let retries = 0;
-            while (retries < 4) {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.user) {
-                console.info('✅ Session resolved from URL hash!');
-                await get().loginWithOAuth({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-                  avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
-                });
-                break;
-              }
-              await new Promise(r => setTimeout(r, 500));
-              retries++;
-            }
-          } else if (!get().currentUser) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              await get().loginWithOAuth({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-                avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
-              });
-            }
+          if (sessionError) {
+            console.error('❌ Session recovery failed:', sessionError);
           }
 
-          // Setup Auth state listener (only once)
+          if (session?.user) {
+            console.info('✅ Active session recovered:', session.user.email);
+            await get().loginWithOAuth({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+              avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
+            });
+          } else {
+            console.info('👤 Continuing as guest');
+          }
+
+          // 3. Setup Auth State Listener (Only once)
           if (!get().initialized) {
             supabase.auth.onAuthStateChange(async (event, session) => {
               console.info(`🔐 Auth event triggered: ${event}`);
@@ -114,17 +101,7 @@ export const useStore = create<AppState>()(
             });
           }
 
-        } catch (err) {
-          console.error('Auth initialization failed:', err);
-        }
-
-        if (get().initialized) {
-          set({ isAuthLoading: false });
-          return;
-        }
-        
-        console.info('🛠️ Initializing Adhyayan Store...');
-        try {
+          // 4. Data Loading (Quizzes/Scores)
           const { currentUser } = get();
           const [quizzesRes, scoresRes] = await Promise.all([
             fetch(`/api/quizzes?userId=${currentUser?.id || ''}`),
@@ -134,45 +111,43 @@ export const useStore = create<AppState>()(
           if (quizzesRes.ok && scoresRes.ok) {
             const quizzes = (await quizzesRes.json()) || [];
             const scores = (await scoresRes.json()) || [];
-
             set({ 
               quizzes: quizzes.length > 0 ? quizzes : get().quizzes, 
-              scores: scores.length > 0 ? scores : get().scores, 
-              initialized: true 
+              scores: scores.length > 0 ? scores : get().scores
             });
           }
 
-          // 3. Setup Supabase Realtime Listeners
-          const quizChannel = supabase
-            .channel('public:quizzes')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quizzes' }, (payload) => {
-              const quiz = snakeToCamel(payload.new);
-              console.info('📡 Realtime: New quiz received', quiz.title);
-              set(state => ({ quizzes: [quiz, ...state.quizzes] }));
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quizzes' }, (payload) => {
-              const updatedQuiz = snakeToCamel(payload.new);
-              console.info('📡 Realtime: Quiz updated', updatedQuiz.title);
-              set(state => ({
-                quizzes: state.quizzes.map(q => 
-                  (q.id === updatedQuiz.id || q._id === updatedQuiz.id) ? updatedQuiz : q
-                )
-              }));
-            })
-            .subscribe();
+          // 5. Setup Realtime Listeners
+          if (!get().initialized) {
+            const quizChannel = supabase
+              .channel('public:quizzes')
+              .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quizzes' }, (payload) => {
+                const quiz = snakeToCamel(payload.new);
+                set(state => ({ quizzes: [quiz, ...state.quizzes] }));
+              })
+              .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quizzes' }, (payload) => {
+                const updatedQuiz = snakeToCamel(payload.new);
+                set(state => ({
+                  quizzes: state.quizzes.map(q => 
+                    (q.id === updatedQuiz.id || q._id === updatedQuiz.id) ? updatedQuiz : q
+                  )
+                }));
+              })
+              .subscribe();
 
-          const scoreChannel = supabase
-            .channel('public:scores')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scores' }, (payload) => {
-              const score = snakeToCamel(payload.new);
-              set(state => ({ scores: [score, ...state.scores] }));
-            })
-            .subscribe();
+            const scoreChannel = supabase
+              .channel('public:scores')
+              .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scores' }, (payload) => {
+                const score = snakeToCamel(payload.new);
+                set(state => ({ scores: [score, ...state.scores] }));
+              })
+              .subscribe();
+          }
 
-          // 4. Finalize
+          // 6. Complete Initialization
           set({ initialized: true, isAuthLoading: false });
         } catch (err) {
-          console.error('Failed to initialize store from server:', err);
+          console.error('❌ Backend initialization failed:', err);
           set({ initialized: true, isAuthLoading: false });
         }
       },
