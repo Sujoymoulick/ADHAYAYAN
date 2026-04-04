@@ -35,6 +35,10 @@ export default function Login() {
   }, [currentUser, navigate]);
 
   const handleSocialAuth = async (provider: string) => {
+    if (!supabase || supabase.auth.getSession === undefined) {
+      setError('⚠️ Authentication service is disconnected. Please check environment variables.');
+      return;
+    }
     setLoading(true);
     if (provider === 'Google') {
       try {

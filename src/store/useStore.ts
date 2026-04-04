@@ -51,23 +51,31 @@ export const useStore = create<AppState>()(
 
       init: async () => {
         if (get().initialized) return;
-
+        
+        console.info('🛠️ Initializing Adhyayan Store...');
         try {
-          // 1. Initial Data Fetch
           const [quizzesRes, scoresRes] = await Promise.all([
             fetch('/api/quizzes'),
             fetch('/api/scores')
           ]);
 
-          const quizzes = (await quizzesRes.json()) || [];
-          const scores = (await scoresRes.json()) || [];
+          if (quizzesRes.ok && scoresRes.ok) {
+            const quizzes = (await quizzesRes.json()) || [];
+            const scores = (await scoresRes.json()) || [];
 
-          set({ 
-            quizzes: quizzes.length > 0 ? quizzes : get().quizzes, 
-            scores: scores.length > 0 ? scores : get().scores, 
-            initialized: true 
-          });
+            set({ 
+              quizzes: quizzes.length > 0 ? quizzes : get().quizzes, 
+              scores: scores.length > 0 ? scores : get().scores, 
+              initialized: true 
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch initial data:', err);
+          // Still mark as initialized to avoid loops
+          set({ initialized: true });
+        }
 
+        try {
           // 2. Setup Supabase Auth Listener
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
@@ -175,6 +183,7 @@ export const useStore = create<AppState>()(
           if (!res.ok) throw new Error('Failed to sync user');
           
           const { user } = await res.json();
+          console.info('✅ User synchronized with backend:', user.email);
           
           set(state => ({
             currentUser: user,
@@ -183,7 +192,7 @@ export const useStore = create<AppState>()(
               : [...state.users, user]
           }));
         } catch (err) {
-          console.error('OAuth sync failed:', err);
+          console.error('❌ OAuth sync failed or timed out:', err);
           // Fallback to local-only if sync fails (offline mode)
           const newUser: User = {
             ...userData,
