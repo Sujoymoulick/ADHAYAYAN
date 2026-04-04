@@ -169,7 +169,8 @@ export const useStore = create<AppState>()(
             })
             .subscribe();
 
-          set({ isAuthLoading: false });
+          // 4. Finalize
+          set({ initialized: true, isAuthLoading: false });
         } catch (err) {
           console.error('Failed to initialize store from server:', err);
           set({ initialized: true, isAuthLoading: false });
@@ -249,42 +250,51 @@ export const useStore = create<AppState>()(
 
       loginWithOAuth: async (userData) => {
         try {
-          const res = await fetch('/api/user/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              avatar: userData.avatar,
-              isOnboarded: userData.isOnboarded,
-              isFirstTimeUser: userData.isFirstTimeUser,
-              profession: userData.profession,
-              interestedCategories: userData.interestedCategories
-            })
-          });
+          set({ isAuthLoading: true });
           
-          if (!res.ok) throw new Error('Failed to sync user');
+          // Only attempt backend sync if we have a valid UUID (which comes from Supabase auth)
+          const isValidUuid = userData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userData.id);
           
-          const { user } = await res.json();
-          console.info('✅ User synchronized with backend:', user.email);
-          
-          set(state => ({
-            currentUser: user,
-            users: state.users.some(u => u.id === user.id) 
-              ? state.users.map(u => u.id === user.id ? user : u)
-              : [...state.users, user]
-          }));
+          if (isValidUuid) {
+            const res = await fetch('/api/user/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                avatar: userData.avatar,
+                isOnboarded: userData.isOnboarded,
+                isFirstTimeUser: userData.isFirstTimeUser,
+                profession: userData.profession,
+                interestedCategories: userData.interestedCategories
+              })
+            });
+            
+            if (res.ok) {
+              const { user } = await res.json();
+              console.info('✅ User synchronized with backend:', user.email);
+              
+              set(state => ({
+                currentUser: user,
+                isAuthLoading: false,
+                users: state.users.some(u => u.id === user.id) 
+                  ? state.users.map(u => u.id === user.id ? user : u)
+                  : [...state.users, user]
+              }));
 
-          // Fetch quizzes again with the user's ID
-          const quizzesRes = await fetch(`/api/quizzes?userId=${user.id}`);
-          if (quizzesRes.ok) {
-            const quizzes = await quizzesRes.json();
-            set({ quizzes });
+              // Fetch quizzes again with the user's ID
+              const quizzesRes = await fetch(`/api/quizzes?userId=${user.id}`);
+              if (quizzesRes.ok) {
+                const quizzes = await quizzesRes.json();
+                set({ quizzes });
+              }
+              return;
+            }
           }
-        } catch (err) {
-          console.error('❌ OAuth sync failed or timed out:', err);
-          // Fallback to local-only if sync fails (offline mode)
+
+          console.warn('❌ Sync skipped or failed, using local session');
+          // Fallback to local session if sync fails or ID is not a UUID
           const newUser: User = {
             ...userData,
             passwordHash: 'oauth_user',
@@ -292,9 +302,12 @@ export const useStore = create<AppState>()(
             createdAt: Date.now(),
             badges: ['First Quiz'],
             bio: "Passionate Learner 🚀",
-            isOnboarded: false
+            isOnboarded: userData.isOnboarded ?? false
           } as User;
-          set({ currentUser: newUser });
+          set({ currentUser: newUser, isAuthLoading: false });
+        } catch (err) {
+          console.error('❌ OAuth sync failed or timed out:', err);
+          set({ isAuthLoading: false });
         }
       },
 

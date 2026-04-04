@@ -75,7 +75,11 @@ export default function Login() {
     if (success) { 
       // Navigation is handled by the useEffect watching currentUser
     } else { 
-      setError(error || 'Invalid email or password'); 
+      if (error?.includes('Email not confirmed')) {
+        setError('⚠️ Email not confirmed. Please check your inbox for a verification link from Supabase.');
+      } else {
+        setError(error || 'Invalid email or password'); 
+      }
     }
     setLoading(false);
   };

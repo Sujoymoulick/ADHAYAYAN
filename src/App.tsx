@@ -23,8 +23,16 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (!isAuthLoading && currentUser && currentUser.isOnboarded === false && location.pathname !== '/onboarding') {
-      navigate('/onboarding', { replace: true });
+    if (isAuthLoading) return;
+
+    if (currentUser) {
+      const needsOnboarding = currentUser.isOnboarded === false || currentUser.isOnboarded === undefined;
+      
+      if (needsOnboarding && location.pathname !== '/onboarding' && !location.pathname.startsWith('/login')) {
+        navigate('/onboarding', { replace: true });
+      } else if (!needsOnboarding && location.pathname === '/onboarding') {
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [currentUser, isAuthLoading, location.pathname, navigate]);
 

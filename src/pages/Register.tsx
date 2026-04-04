@@ -12,6 +12,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { currentUser, register, loginWithOAuth } = useStore();
   const navigate = useNavigate();
@@ -70,7 +71,20 @@ export default function Register() {
     });
 
     if (success) {
-      // Navigation is handled by the useEffect watching currentUser
+      // If confirm email is ON, currentUser might still be null
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        setError('');
+        setName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        // We use the error state to show a success message in this context for simplicity, 
+        // or we could add a dedicated success state. Let's add a success state.
+        setSuccess('Registration successful! Please check your inbox for a verification link to activate your account.');
+        return;
+      }
     } else {
       setError(error || 'Registration failed. Email might already be in use.');
     }
@@ -138,6 +152,11 @@ export default function Register() {
               {error && (
                 <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg text-sm">
                   {error}
+                </div>
+              )}
+              {success && (
+                <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 p-3 rounded-lg text-sm">
+                  {success}
                 </div>
               )}
               
