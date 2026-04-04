@@ -20,10 +20,10 @@ interface AppState {
   migrateLocalData: () => Promise<void>;
 
   // Auth & Profile
-  login: (email: string, passwordHash: string) => boolean;
+  login: (email: string, passwordHash: string) => Promise<{ success: boolean; error?: string }>;
   loginWithOAuth: (userData: { id?: string; email: string; name: string; avatar: string }) => Promise<void>;
   resetPassword: (email: string, newPasswordHash: string) => boolean;
-  register: (user: Omit<User, 'id' | 'createdAt' | 'badges'>) => boolean;
+  register: (user: Omit<User, 'id' | 'createdAt' | 'badges'>) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   continueAsGuest: () => void;
   setUser: (user: User) => void; 
@@ -134,13 +134,29 @@ export const useStore = create<AppState>()(
       }),
 
       // Auth Actions
-      login: (email, passwordHash) => {
-        const user = get().users.find(u => u.email === email && u.passwordHash === passwordHash);
-        if (user) {
-          set({ currentUser: user });
-          return true;
+      login: async (email, password) => {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) throw error;
+
+          if (data.user) {
+            await get().loginWithOAuth({
+              id: data.user.id,
+              email: data.user.email || '',
+              name: data.user.user_metadata.full_name || data.user.email?.split('@')[0] || 'User',
+              avatar: data.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`
+            });
+            return { success: true };
+          }
+          return { success: false, error: 'No user data returned' };
+        } catch (err: any) {
+          console.error('Login error:', err);
+          return { success: false, error: err.message || 'Invalid email or password' };
         }
-        return false;
       },
 
       loginWithOAuth: async (userData) => {
@@ -182,24 +198,35 @@ export const useStore = create<AppState>()(
         }
       },
 
-      register: (userData) => {
-        const exists = get().users.some(u => u.email === userData.email);
-        if (exists) return false;
+      register: async (userData) => {
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email: userData.email,
+            password: userData.passwordHash, // Using the same field but it's the raw pass for Supabase
+            options: {
+              data: {
+                full_name: userData.name,
+                avatar_url: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email}`
+              }
+            }
+          });
 
-        const newUser: User = {
-          ...userData,
-          id: `u_${Date.now()}`,
-          createdAt: Date.now(),
-          badges: ['First Quiz'],
-          bio: "Passionate Learner 🚀",
-          isOnboarded: false
-        };
+          if (error) throw error;
 
-        set(state => ({
-          users: [...state.users, newUser],
-          currentUser: newUser
-        }));
-        return true;
+          if (data.user) {
+            await get().loginWithOAuth({
+              id: data.user.id,
+              email: data.user.email || '',
+              name: userData.name,
+              avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.email}`
+            });
+            return { success: true };
+          }
+          return { success: false, error: 'Registration failed' };
+        } catch (err: any) {
+          console.error('Registration error:', err);
+          return { success: false, error: err.message || 'Registration failed' };
+        }
       },
 
       resetPassword: (email, newPasswordHash) => {

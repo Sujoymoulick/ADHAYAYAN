@@ -29,7 +29,7 @@ export default function Register() {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}/dashboard`,
           },
         });
         if (error) throw error;
@@ -41,19 +41,7 @@ export default function Register() {
       return;
     }
     
-    if (provider === 'GitHub' || provider === 'LinkedIn') {
-      // Mock login functionality for GitHub and LinkedIn
-      await new Promise(resolve => setTimeout(resolve, 800));
-      loginWithOAuth({
-        email: `${provider.toLowerCase()}@example.com`,
-        name: `${provider} User`,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`
-      });
-      navigate('/');
-      setLoading(false);
-      return;
-    }
-    
+    // Mock other providers for now or add them later
     setLoading(false);
   };
 
@@ -73,20 +61,18 @@ export default function Register() {
 
     setLoading(true);
 
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const success = register({
+    const { success, error } = await register({
       name,
       email,
-      passwordHash: password, // In a real app, never store plain text
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}`
+      passwordHash: password, // Raw password for Supabase signUp
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '') || email}`,
+      bio: "Passionate Learner 🚀"
     });
 
     if (success) {
-      navigate('/');
+      // Navigation is handled by the useEffect watching currentUser
     } else {
-      setError('Email already exists');
+      setError(error || 'Registration failed. Email might already be in use.');
     }
     setLoading(false);
   };

@@ -38,6 +38,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function HomeRedirect() {
+  const currentUser = useStore((state) => state.currentUser);
+  if (currentUser) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Home />;
+}
+
 function StoreInitializer() {
   const init = useStore(state => state.init);
   
@@ -57,7 +65,7 @@ export default function App() {
         <main className="flex-1 flex flex-col">
           <OnboardingGuard>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<HomeRedirect />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/explore" element={<Explore />} />

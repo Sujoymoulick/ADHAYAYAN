@@ -41,7 +41,7 @@ export default function Login() {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}/dashboard`,
           },
         });
         if (error) throw error;
@@ -59,9 +59,12 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const success = login(email, password);
-    if (success) { navigate('/'); } else { setError('Invalid email or password'); }
+    const { success, error } = await login(email, password);
+    if (success) { 
+      // Navigation is handled by the useEffect watching currentUser
+    } else { 
+      setError(error || 'Invalid email or password'); 
+    }
     setLoading(false);
   };
 
