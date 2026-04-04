@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useStore } from '../store/useStore';
 import { BrainCircuit, Eye, EyeOff, UserPlus, Github, Linkedin } from 'lucide-react';
-import { OAuthSetupModal } from '../components/OAuthSetupModal';
+import { supabase } from '../lib/supabase';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -13,88 +13,28 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSetupModal, setShowSetupModal] = useState(false);
   const { register, loginWithOAuth } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for pending login from redirect flow
-    const pendingLogin = localStorage.getItem('oauth_pending_login');
-    if (pendingLogin) {
-      try {
-        const data = JSON.parse(pendingLogin);
-        if (data.type === 'OAUTH_AUTH_SUCCESS') {
-          const { user, provider } = data;
-          loginWithOAuth({
-            email: user.email,
-            name: user.name || `${provider} User`,
-            avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-          });
-          localStorage.removeItem('oauth_pending_login');
-          navigate('/');
-        }
-      } catch (e) {
-        console.error('Error parsing pending login', e);
-      }
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      // Validate origin is from AI Studio preview or localhost
-      const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
-        return;
-      }
-      
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        const { user, provider } = event.data;
-        
-        loginWithOAuth({
-          email: user.email,
-          name: user.name || `${provider} User`,
-          avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-        });
-        
-        navigate('/');
-        setLoading(false);
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [loginWithOAuth, navigate]);
+    // Supabase handles auth callback/redirect automatically.
+    // The session is managed in useStore.ts via onAuthStateChange.
+  }, [navigate]);
 
   const handleSocialAuth = async (provider: string) => {
     setLoading(true);
-    
     if (provider === 'Google') {
       try {
-        const response = await fetch('/api/auth/google/url');
-        const data = await response.json();
-        
-        if (!response.ok) {
-          if (data.error === 'not_configured') {
-            setShowSetupModal(true);
-            setLoading(false);
-            return;
-          }
-          throw new Error('Failed to get auth URL');
-        }
-        
-        const { url } = data;
-        
-        const authWindow = window.open(
-          url,
-          'oauth_popup',
-          'width=600,height=700'
-        );
-        
-        if (!authWindow) {
-          alert('Please allow popups for this site to connect your account.');
-          setLoading(false);
-        }
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
       } catch (error) {
         console.error('OAuth error:', error);
-        setError('Failed to initialize Google login. Please check your configuration.');
+        setError('Failed to initialize Google login.');
         setLoading(false);
       }
       return;
@@ -311,10 +251,6 @@ export default function Register() {
         </div>
       </div>
       
-      <OAuthSetupModal 
-        isOpen={showSetupModal} 
-        onClose={() => setShowSetupModal(false)} 
-      />
     </div>
   );
 }
