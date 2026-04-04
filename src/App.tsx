@@ -19,35 +19,39 @@ import QuizDetails from './pages/QuizDetails';
 import AuthCallback from './pages/AuthCallback';
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
-  const { currentUser, isAuthLoading } = useStore();
+  const { currentUser, isAuthLoading, initialized } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (isAuthLoading) return;
+    // Wait for the store to be at least once initialized
+    if (!initialized || isAuthLoading) return;
 
     if (currentUser) {
       const needsOnboarding = currentUser.isOnboarded === false || currentUser.isOnboarded === undefined;
       
       if (needsOnboarding && location.pathname !== '/onboarding' && !location.pathname.startsWith('/login')) {
+        console.info('🛡️ Guard: Redirecting to onboarding');
         navigate('/onboarding', { replace: true });
       } else if (!needsOnboarding && location.pathname === '/onboarding') {
+        console.info('🛡️ Guard: Onboarding complete, to dashboard');
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [currentUser, isAuthLoading, location.pathname, navigate]);
+  }, [currentUser, isAuthLoading, initialized, location.pathname, navigate]);
 
-  if (isAuthLoading) return <LoadingScreen />;
+  if (!initialized || isAuthLoading) return <LoadingScreen />;
 
   return <>{children}</>;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { currentUser, isAuthLoading } = useStore();
+  const { currentUser, isAuthLoading, initialized } = useStore();
   
-  if (isAuthLoading) return <LoadingScreen />;
+  if (!initialized || isAuthLoading) return <LoadingScreen />;
   
   if (!currentUser) {
+    console.warn('🛡️ ProtectedRoute: Unauthenticated, to /login');
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;

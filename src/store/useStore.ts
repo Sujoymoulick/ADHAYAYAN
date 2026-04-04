@@ -60,11 +60,14 @@ export const useStore = create<AppState>()(
 
       init: async () => {
         try {
-          // 1. Initial State Setup
           set({ isAuthLoading: true });
-          console.info('📡 Initializing Adhyayan Store...');
+          console.info('📡 Adhyayan (Fresh) Init Start...', {
+            origin: window.location.origin,
+            pathname: window.location.pathname,
+            timestamp: new Date().toISOString()
+          });
 
-          // 2. Definitive Session Check (Handles Hash/Code Redirects Automatically)
+          // 1. Get Session Directly (Critical for PKCE callback)
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
           if (sessionError) {
@@ -73,6 +76,7 @@ export const useStore = create<AppState>()(
 
           if (session?.user) {
             console.info('✅ Active session recovered:', session.user.email);
+            // This syncs with the backend and sets the currentUser locally
             await get().loginWithOAuth({
               id: session.user.id,
               email: session.user.email || '',
@@ -80,14 +84,14 @@ export const useStore = create<AppState>()(
               avatar: session.user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.email}`
             });
           } else {
-            console.info('👤 Continuing as guest');
+            console.info('👤 No session found, user is guest');
           }
 
-          // 3. Setup Auth State Listener (Only once)
+          // 2. Setup Auth State Listener (Only once)
           if (!get().initialized) {
             supabase.auth.onAuthStateChange(async (event, session) => {
               console.info(`🔐 Auth event triggered: ${event}`);
-              if (session?.user) {
+              if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
                 const { user } = session;
                 await get().loginWithOAuth({
                   id: user.id,
@@ -99,7 +103,7 @@ export const useStore = create<AppState>()(
                 set({ currentUser: null });
               }
             });
-          }
+          };
 
           // 4. Data Loading (Quizzes/Scores)
           const { currentUser } = get();
