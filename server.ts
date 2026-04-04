@@ -54,8 +54,8 @@ async function seedDatabase() {
   }
 }
 
-// Initialize database
-seedDatabase();
+// Seeding disabled for production/clean slate
+// seedDatabase();
 
 export const app = express();
 const PORT = 3000;
@@ -382,21 +382,29 @@ Rules:
   // Sync User Profile (Upsert)
   app.post('/api/user/sync', async (req, res) => {
     try {
-      const { id, email, name, avatar } = req.body;
+      const { id, email, name, avatar, isOnboarded, isFirstTimeUser, profession, interestedCategories } = req.body;
       if (!id || !email) return res.status(400).json({ error: 'User ID and email are required' });
+
+      // Build upsert object with optional fields
+      const upsertData: any = {
+        id,
+        email,
+        name: name || email.split('@')[0],
+        avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        last_login: new Date().toISOString()
+      };
+
+      // Only include onboarding fields if they are provided (to avoid overwriting with null)
+      if (isOnboarded !== undefined) upsertData.is_onboarded = isOnboarded;
+      if (isFirstTimeUser !== undefined) upsertData.is_first_time_user = isFirstTimeUser;
+      if (profession !== undefined) upsertData.profession = profession;
+      if (interestedCategories !== undefined) upsertData.interested_categories = interestedCategories;
 
       const { data: profile, error } = await supabase
         .from('profiles')
-        .upsert({
-          id,
-          email,
-          name: name || email.split('@')[0],
-          avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-          last_login: new Date().toISOString()
-        }, { onConflict: 'id' })
+        .upsert(upsertData, { onConflict: 'id' })
         .select()
         .single();
-
       if (error) throw error;
 
       res.json({

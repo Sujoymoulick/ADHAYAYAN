@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, Quiz, Score } from '../types';
 import { supabase } from '../lib/supabase';
-import { seedUsers, seedQuizzes, seedScores } from '../utils/seedData';
 
 // Helper to convert snake_case (DB) to camelCase (Frontend) for Realtime payloads
 const snakeToCamel = (obj: any): any => {
@@ -30,13 +29,13 @@ interface AppState {
 
   // Auth & Profile
   login: (email: string, passwordHash: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithOAuth: (userData: { id?: string; email: string; name: string; avatar: string }) => Promise<void>;
+  loginWithOAuth: (userData: Partial<User> & { id?: string; email: string; name: string; avatar: string }) => Promise<void>;
   resetPassword: (email: string, newPasswordHash: string) => boolean;
   register: (user: Omit<User, 'id' | 'createdAt' | 'badges'>) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   continueAsGuest: () => void;
   setUser: (user: User) => void; 
-  completeOnboarding: (data: Partial<User>) => void;
+  completeOnboarding: (data: Partial<User>) => Promise<void>;
 
   // Quizzes
   addQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt' | 'attempts' | 'rating' | 'ratingCount' | 'reviews'>) => Promise<string>;
@@ -52,9 +51,9 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      users: seedUsers,
-      quizzes: seedQuizzes,
-      scores: seedScores,
+      users: [],
+      quizzes: [],
+      scores: [],
       currentUser: null,
       initialized: false,
       isAuthLoading: true,
@@ -177,14 +176,16 @@ export const useStore = create<AppState>()(
         users: state.users.map(u => u.id === user.id ? user : u)
       })),
 
-      completeOnboarding: (data) => set(state => {
-        if (!state.currentUser) return state;
-        const updatedUser = { ...state.currentUser, ...data, isOnboarded: true };
-        return {
-          currentUser: updatedUser,
-          users: state.users.map(u => u.id === updatedUser.id ? updatedUser : u)
-        };
-      }),
+      completeOnboarding: async (data) => {
+        const currentUser = get().currentUser;
+        if (!currentUser) return;
+        
+        await get().loginWithOAuth({
+          ...currentUser,
+          ...data,
+          isOnboarded: true
+        });
+      },
 
       // Auth Actions
       login: async (email, password) => {
@@ -221,7 +222,11 @@ export const useStore = create<AppState>()(
               id: userData.id,
               email: userData.email,
               name: userData.name,
-              avatar: userData.avatar
+              avatar: userData.avatar,
+              isOnboarded: userData.isOnboarded,
+              isFirstTimeUser: userData.isFirstTimeUser,
+              profession: userData.profession,
+              interestedCategories: userData.interestedCategories
             })
           });
           
