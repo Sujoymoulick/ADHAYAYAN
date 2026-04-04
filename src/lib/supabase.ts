@@ -24,14 +24,5 @@ export const supabaseAdmin = (supabaseServiceRoleKey && supabaseUrl)
 // General use (with anon key)
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      flowType: 'pkce'
-    }
-  }
+  supabaseAnonKey || 'placeholder'
 );

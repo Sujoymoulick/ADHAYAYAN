@@ -11,25 +11,10 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.info('📡 AuthCallback: Exchanging code for session...');
-        
-        // 1. Manually trigger session recovery if Supabase hasn't yet
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
-
-        if (session) {
-          console.info('✅ AuthCallback: Session confirmed!', session.user.email);
-          // 2. Re-initialize the store to ensure backend sync happens with the new session
-          await init();
-          // 3. Final redirect to dashboard
-          navigate('/dashboard', { replace: true });
-        } else {
-          console.warn('⚠️ AuthCallback: No session found, redirecting to login...');
-          navigate('/login', { replace: true });
-        }
+        await init();
+        navigate('/dashboard', { replace: true });
       } catch (err) {
-        console.error('❌ AuthCallback: Failed to exchange session:', err);
+        console.error('❌ Auth Fresh Start Error:', err);
         navigate('/login?error=bad_oauth_state', { replace: true });
       }
     };
