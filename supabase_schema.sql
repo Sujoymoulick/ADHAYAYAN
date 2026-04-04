@@ -72,3 +72,11 @@ CREATE POLICY "Quizzes can be updated by creators" ON quizzes FOR UPDATE USING (
 -- Scores: Everyone can see global scores, anyone can submit
 CREATE POLICY "Scores are viewable by everyone" ON scores FOR SELECT USING (true);
 CREATE POLICY "Scores can be submitted by anyone" ON scores FOR INSERT WITH CHECK (true);
+
+-- 6. ENABLE REALTIME
+-- This allows Supabase to broadcast changes to the frontend automatically
+BEGIN;
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime;
+COMMIT;
+ALTER PUBLICATION supabase_realtime ADD TABLE quizzes, scores, profiles;

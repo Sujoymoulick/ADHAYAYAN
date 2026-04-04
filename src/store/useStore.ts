@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import io from 'socket.io-client';
 import { User, Quiz, Score } from '../types';
 import { supabase } from '../lib/supabase';
 import { seedUsers, seedQuizzes, seedScores } from '../utils/seedData';
 
-// Initialize socket connection
-const socket = io(window.location.origin);
+// Helper to convert snake_case (DB) to camelCase (Frontend) for Realtime payloads
+const snakeToCamel = (obj: any): any => {
+  if (Array.isArray(obj)) return obj.map(snakeToCamel);
+  if (obj === null || typeof obj !== 'object' || obj instanceof Date) return obj;
+  
+  return Object.keys(obj).reduce((acc: any, key) => {
+    const camelKey = key.replace(/(_\w)/g, (m) => m[1].toUpperCase());
+    acc[camelKey] = snakeToCamel(obj[key]);
+    return acc;
+  }, {});
+};
 
 interface AppState {
   users: User[];
@@ -131,24 +139,32 @@ export const useStore = create<AppState>()(
             }
           });
 
-          // 3. Setup Socket Listeners
-          socket.on('new_quiz', (quiz: Quiz) => {
-            set(state => ({ quizzes: [quiz, ...state.quizzes] }));
-          });
+          // 3. Setup Supabase Realtime Listeners
+          const quizChannel = supabase
+            .channel('public:quizzes')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quizzes' }, (payload) => {
+              const quiz = snakeToCamel(payload.new);
+              console.info('📡 Realtime: New quiz received', quiz.title);
+              set(state => ({ quizzes: [quiz, ...state.quizzes] }));
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quizzes' }, (payload) => {
+              const updatedQuiz = snakeToCamel(payload.new);
+              console.info('📡 Realtime: Quiz updated', updatedQuiz.title);
+              set(state => ({
+                quizzes: state.quizzes.map(q => 
+                  (q.id === updatedQuiz.id || q._id === updatedQuiz.id) ? updatedQuiz : q
+                )
+              }));
+            })
+            .subscribe();
 
-          socket.on('new_review', ({ quizId, review, rating, ratingCount }) => {
-            set(state => ({
-              quizzes: state.quizzes.map(q => 
-                (q.id === quizId || q._id === quizId)
-                ? { ...q, rating, ratingCount, reviews: [...(q.reviews || []), review] } 
-                : q
-              )
-            }));
-          });
-
-          socket.on('new_score', (score: Score) => {
-            set(state => ({ scores: [score, ...state.scores] }));
-          });
+          const scoreChannel = supabase
+            .channel('public:scores')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scores' }, (payload) => {
+              const score = snakeToCamel(payload.new);
+              set(state => ({ scores: [score, ...state.scores] }));
+            })
+            .subscribe();
 
         } catch (err) {
           console.error('Failed to initialize store from server:', err);

@@ -4,8 +4,6 @@ import { supabaseAdmin as supabase } from './src/lib/supabase'
 import express from 'express'
 import { createServer as createViteServer } from 'vite'
 import path from 'path'
-import http from 'http'
-import { Server } from 'socket.io'
 import fs from 'fs'
 
 
@@ -40,9 +38,9 @@ async function seedDatabase() {
       const { seedQuizzes } = await import('./src/utils/seedData');
       
       const preparedQuizzes = seedQuizzes.map(q => {
-        const snakeQuiz = camelToSnake(q);
+        const { id, ...rest } = camelToSnake(q);
         return {
-          ...snakeQuiz,
+          ...rest,
           created_at: new Date().toISOString()
         };
       });
@@ -60,18 +58,7 @@ async function seedDatabase() {
 seedDatabase();
 
 export const app = express();
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
-});
-
 const PORT = 3000;
-
-// Socket.io Connection
-io.on('connection', (socket) => {
-  console.log('🔌 New client connected:', socket.id);
-  socket.on('disconnect', () => console.log('🔌 Client disconnected:', socket.id));
-});
 
   // 2. Middleware
   app.use(express.json());
@@ -251,9 +238,8 @@ Rules:
       };
       
       // Real-time broadcast
-      io.emit('new_quiz', mappedQuiz);
-      
-      res.json(mappedQuiz);
+
+      res.status(201).json(mappedQuiz);
     } catch (err) {
       console.error('Create quiz error:', err);
       res.status(500).json({ error: 'Failed to create quiz' });
@@ -307,13 +293,6 @@ Rules:
       };
 
       // Real-time broadcast
-      io.emit('new_review', { 
-        quizId: id, 
-        review: newReview, 
-        rating: mappedQuiz.rating, 
-        ratingCount: mappedQuiz.ratingCount 
-      });
-
       res.json({ success: true, quiz: mappedQuiz });
     } catch (err) {
       console.error('Rate quiz error:', err);
@@ -366,9 +345,8 @@ Rules:
       };
 
       // Real-time broadcast for leaderboards etc
-      io.emit('new_score', mappedScore);
 
-      res.json(mappedScore);
+      res.status(201).json(mappedScore);
     } catch (err) {
       console.error('Save score error:', err);
       res.status(500).json({ error: 'Failed to save score' });
@@ -467,7 +445,7 @@ if (!process.env.VERCEL) {
       app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
     }
 
-    httpServer.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
   }
