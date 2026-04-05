@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { User, Quiz, Score } from '../types';
 import { supabase } from '../lib/supabase';
+ 
+ const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 
 // Helper to convert snake_case (DB) to camelCase (Frontend) for Realtime payloads
 const snakeToCamel = (obj: any): any => {
@@ -104,8 +106,8 @@ export const useStore = create<AppState>()((set, get) => ({
       // 4. Data Loading (Quizzes/Scores)
       const { currentUser } = get();
       const [quizzesRes, scoresRes] = await Promise.all([
-        fetch(`/api/quizzes?userId=${currentUser?.id || ''}`),
-        fetch('/api/scores')
+        fetch(`${API_BASE}/api/quizzes?userId=${currentUser?.id || ''}`),
+        fetch(`${API_BASE}/api/scores`)
       ]).catch(err => {
         console.error('Fetch error during init:', err);
         return [null, null];
@@ -160,7 +162,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const { currentUser } = get();
       if (!currentUser) return;
 
-      const res = await fetch('/api/user/update', {
+      const res = await fetch(`${API_BASE}/api/user/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -229,44 +231,62 @@ export const useStore = create<AppState>()((set, get) => ({
       const isValidUuid = userData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userData.id);
       
       if (isValidUuid) {
-        const res = await fetch('/api/user/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            avatar: userData.avatar,
-            isOnboarded: userData.isOnboarded,
-            isFirstTimeUser: userData.isFirstTimeUser,
-            profession: userData.profession,
-            interestedCategories: userData.interestedCategories
-          })
-        });
-        
-        if (res.ok) {
-          const { user } = await res.json();
-          set(state => ({
-            currentUser: user,
-            isAuthLoading: false,
-            users: state.users.some(u => u.id === user.id) 
-              ? state.users.map(u => u.id === user.id ? user : u)
-              : [...state.users, user]
-          }));
+        try {
+          const res = await fetch(`${API_BASE}/api/user/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              avatar: userData.avatar,
+              isOnboarded: userData.isOnboarded,
+              isFirstTimeUser: userData.isFirstTimeUser,
+              profession: userData.profession,
+              interestedCategories: userData.interestedCategories
+            })
+          });
+          
+          if (res.ok) {
+            const { user } = await res.json();
+            set(state => ({
+              currentUser: user,
+              isAuthLoading: false,
+              users: state.users.some(u => u.id === user.id) 
+                ? state.users.map(u => u.id === user.id ? user : u)
+                : [...state.users, user]
+            }));
 
-          const quizzesRes = await fetch(`/api/quizzes?userId=${user.id}`);
-          if (quizzesRes.ok) {
-            const quizzes = await quizzesRes.json();
-            set({ quizzes });
+            const quizzesRes = await fetch(`${API_BASE}/api/quizzes?userId=${user.id}`);
+            if (quizzesRes.ok) {
+              const quizzes = await quizzesRes.json();
+              set({ quizzes });
+            }
+            return;
           }
-          return;
+        } catch (syncErr) {
+          console.error('⚠️ Sync failed or timeout, falling back to local Supabase profile:', syncErr);
         }
       }
 
-      console.warn('❌ Sync failed, currentUser remains null');
-      set({ currentUser: null, isAuthLoading: false });
+      console.warn('❌ Backend sync failed! Falling back to base session data to prevent login loop.');
+      set({ 
+        currentUser: {
+          id: userData.id || `temp_${Date.now()}`,
+          email: userData.email,
+          name: userData.name,
+          avatar: userData.avatar,
+          bio: 'Passionate Learner 🚀',
+          isOnboarded: false,
+          totalScore: 0,
+          passwordHash: '',
+          badges: [],
+          createdAt: Date.now()
+        } as User,
+        isAuthLoading: false 
+      });
     } catch (err) {
-      console.error('❌ OAuth sync failed or timed out:', err);
+      console.error('❌ Authentication flow error:', err);
       set({ currentUser: null, isAuthLoading: false });
     }
   },
@@ -323,7 +343,7 @@ export const useStore = create<AppState>()((set, get) => ({
   // Quiz Actions
   addQuiz: async (quizData) => {
     try {
-      const res = await fetch('/api/quizzes', {
+      const res = await fetch(`${API_BASE}/api/quizzes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...quizData, createdBy: get().currentUser?.id || 'guest' })
@@ -351,7 +371,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   incrementQuizAttempts: async (id) => {
     try {
-      await fetch(`/api/quizzes/${id}/attempt`, { method: 'POST' });
+      await fetch(`${API_BASE}/api/quizzes/${id}/attempt`, { method: 'POST' });
       set(state => ({
         quizzes: state.quizzes.map(q => (q.id === id || q._id === id) ? { ...q, attempts: (q.attempts || 0) + 1 } : q)
       }));
@@ -362,7 +382,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   submitQuizRating: async (id, newRating, comment, userName) => {
     try {
-      await fetch(`/api/quizzes/${id}/rate`, {
+      await fetch(`${API_BASE}/api/quizzes/${id}/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: newRating, comment, userName })
@@ -374,7 +394,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addScore: async (scoreData) => {
     try {
-      const res = await fetch('/api/scores', {
+      const res = await fetch(`${API_BASE}/api/scores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...scoreData, userId: get().currentUser?.id || 'guest' })
