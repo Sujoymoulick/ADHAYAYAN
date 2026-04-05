@@ -91,35 +91,40 @@ export const useStore = create<AppState>()((set, get) => ({
           console.info(`🔐 Auth event triggered: ${event}`);
           if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
             const { user } = session;
-            await get().loginWithOAuth({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
-              avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
-            });
+            // Only re-sync if the user has changed or currentUser is basic fallback
+            if (get().currentUser?.id !== user.id) {
+              await get().loginWithOAuth({
+                id: user.id,
+                email: user.email || '',
+                name: user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
+                avatar: user.user_metadata.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`
+              });
+            }
           } else if (event === 'SIGNED_OUT') {
-            set({ currentUser: null });
+            set({ currentUser: null, initialized: true, isAuthLoading: false });
           }
         });
       };
 
       // 4. Data Loading (Quizzes/Scores)
       const { currentUser } = get();
-      const [quizzesRes, scoresRes] = await Promise.all([
-        fetch(`${API_BASE}/api/quizzes?userId=${currentUser?.id || ''}`),
-        fetch(`${API_BASE}/api/scores`)
-      ]).catch(err => {
-        console.error('Fetch error during init:', err);
-        return [null, null];
-      });
-
-      if (quizzesRes?.ok && scoresRes?.ok) {
-        const quizzes = (await quizzesRes.json()) || [];
-        const scores = (await scoresRes.json()) || [];
-        set({ 
-          quizzes: quizzes.length > 0 ? quizzes : get().quizzes, 
-          scores: scores.length > 0 ? scores : get().scores
+      if (currentUser) {
+        const [quizzesRes, scoresRes] = await Promise.all([
+          fetch(`${API_BASE}/api/quizzes?userId=${currentUser?.id || ''}`),
+          fetch(`${API_BASE}/api/scores`)
+        ]).catch(err => {
+          console.error('Fetch error during init:', err);
+          return [null, null];
         });
+
+        if (quizzesRes?.ok && scoresRes?.ok) {
+          const quizzes = (await quizzesRes.json()) || [];
+          const scores = (await scoresRes.json()) || [];
+          set({ 
+            quizzes: quizzes.length > 0 ? quizzes : get().quizzes, 
+            scores: scores.length > 0 ? scores : get().scores
+          });
+        }
       }
 
       // 5. Setup Realtime Listeners

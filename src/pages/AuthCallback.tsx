@@ -1,39 +1,44 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useStore } from '../store/useStore';
 import LoadingScreen from '../components/LoadingScreen';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const init = useStore(state => state.init);
+  const { currentUser, initialized, isAuthLoading } = useStore();
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        console.info('📡 Auth Fresh Start: Waiting for session settlement (500ms)...');
-        
-        // Give Supabase a tiny window to finish processing the Hash/Code internally
-        await new Promise(r => setTimeout(r, 500));
-        
-        await init();
-        
-        const { currentUser } = useStore.getState();
-        if (currentUser) {
-          console.info('✅ Auth Fresh Start: Session confirmed, moving to dashboard');
-          navigate('/dashboard', { replace: true });
-        } else {
-          console.warn('⚠️ Auth Fresh Start: No session detected after init, back to /login');
-          navigate('/login', { replace: true });
-        }
-      } catch (err) {
-        console.error('❌ Auth Fresh Start Error:', err);
-        navigate('/login?error=bad_oauth_state', { replace: true });
-      }
-    };
+    console.info('📡 Auth Callback: Observing store...', { 
+      hasUser: !!currentUser, 
+      initialized, 
+      isAuthLoading,
+      hash: window.location.hash ? 'Present' : 'None'
+    });
 
-    handleAuthCallback();
-  }, [init, navigate]);
+    // Case 1: Session Found!
+    if (currentUser) {
+      console.info('✅ Auth Callback: Session confirmed, moving to dashboard');
+      navigate('/dashboard', { replace: true });
+      return;
+    }
 
-  return <LoadingScreen />;
+    // Case 2: Initialization complete but no user found
+    // We wait a bit longer specifically on this page before redirecting to login
+    if (initialized && !isAuthLoading && hasTimedOut) {
+      console.warn('⚠️ Auth Callback: Timeout reached with no session, back to /login');
+      navigate('/login', { replace: true });
+      return;
+    }
+  }, [currentUser, initialized, isAuthLoading, navigate, hasTimedOut]);
+
+  // Safety Timeout: If we haven't found a user within 5 seconds, give up
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return <LoadingScreen message="Unlocking your quest..." />;
 }
