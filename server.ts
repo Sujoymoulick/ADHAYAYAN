@@ -2,7 +2,6 @@ import 'dotenv/config'
 
 import { supabaseAdmin as supabase } from './src/lib/supabase'
 import express from 'express'
-import { createServer as createViteServer } from 'vite'
 import path from 'path'
 import fs from 'fs'
 
@@ -481,6 +480,7 @@ if (!process.env.VERCEL) {
   async function startViteServer() {
 
     if (process.env.NODE_ENV !== 'production') {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: 'custom',
