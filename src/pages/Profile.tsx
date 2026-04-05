@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   User, Settings, Trophy, Clock, Star, BrainCircuit,
   Trash2, Edit3, Eye, X, Save, Upload, Camera, Plus, Compass,
-  MessageSquare, Calendar, CloudUpload, RefreshCw
+  MessageSquare, Calendar
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../utils/cn';
@@ -25,8 +25,6 @@ export default function Profile() {
   const [editBio, setEditBio] = useState('');
   const [editAvatar, setEditAvatar] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [localDraft, setLocalDraft] = useState<any>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,27 +36,6 @@ export default function Profile() {
     }
   }, [isEditModalOpen, currentUser]);
 
-  useEffect(() => {
-    const savedDraft = localStorage.getItem('adhyayan_quiz_draft');
-    if (savedDraft) {
-      try {
-        const parsed = JSON.parse(savedDraft);
-        // Only show if it has at least a title or some questions
-        if (parsed.title || (parsed.questions && parsed.questions.length > 0)) {
-          setLocalDraft(parsed);
-        }
-      } catch (e) {
-        console.error("Error parsing local draft", e);
-      }
-    }
-  }, []);
-
-  const handleDeleteDraft = () => {
-    if (window.confirm("Are you sure you want to discard this draft?")) {
-      localStorage.removeItem('adhyayan_quiz_draft');
-      setLocalDraft(null);
-    }
-  };
 
   if (!currentUser) return null;
 
@@ -89,12 +66,6 @@ export default function Profile() {
     }
   };
 
-  const handleMigration = async () => {
-    setIsMigrating(true);
-    const { migrateLocalData } = useStore.getState();
-    await migrateLocalData();
-    setIsMigrating(false);
-  };
 
   const myQuizzes = quizzes.filter(q => q.createdBy === currentUser.id);
   const myScores = scores.filter(s => s.userId === currentUser.id);
@@ -128,15 +99,6 @@ export default function Profile() {
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 w-full md:w-auto">
             <button onClick={() => setIsEditModalOpen(true)} className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base">
               <Edit3 className="w-4 h-4" /> Edit Profile
-            </button>
-            <button 
-              onClick={handleMigration} 
-              disabled={isMigrating}
-              className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-brand-blue/10 border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/20 transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm sm:text-base"
-              title="If your quizzes or scores are missing, click this to restore them from your browser's memory."
-            >
-              {isMigrating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
-              {isMigrating ? "Syncing..." : "Restore Data"}
             </button>
           </div>
         </div>
@@ -255,50 +217,6 @@ export default function Profile() {
               </Link>
             </motion.div>
 
-            {/* Draft Quiz Card */}
-            {localDraft && (
-              <motion.div 
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-slate-900 rounded-2xl border border-brand-blue/30 overflow-hidden flex flex-col h-full relative group shadow-[0_0_20px_rgba(59,130,246,0.1)]"
-              >
-                <div className="absolute top-3 right-3 z-10">
-                  <span className="bg-brand-blue/20 text-brand-blue text-[10px] font-bold px-2 py-1 rounded-full border border-brand-blue/30 uppercase tracking-wider">
-                    Draft
-                  </span>
-                </div>
-                <div className="p-5 flex-1 pt-10">
-                  <h3 className="text-lg font-bold text-white mb-2">{localDraft.title || 'Untitled Quiz'}</h3>
-                  <p className="text-slate-400 text-sm line-clamp-2">{localDraft.description || 'No description'}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="text-[10px] bg-white/5 text-slate-400 px-2 py-0.5 rounded-md border border-white/5">
-                      {localDraft.questions?.length || 0} Questions
-                    </span>
-                    {localDraft.updatedAt && (
-                      <span className="text-[10px] bg-white/5 text-slate-400 px-2 py-0.5 rounded-md border border-white/5 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" /> {new Date(localDraft.updatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4 border-t border-white/5 flex gap-3 items-center bg-brand-blue/5 overflow-hidden">
-                  <button 
-                    onClick={handleDeleteDraft} 
-                    className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                    title="Discard Draft"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <Link 
-                    to="/create" 
-                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-brand-blue text-brand-navy font-bold text-sm hover:translate-y-[-2px] transition-all shadow-lg active:translate-y-0"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" /> Resume Draft
-                  </Link>
-                </div>
-              </motion.div>
-            )}
 
             <AnimatePresence mode="popLayout">
               {myQuizzes.map(quiz => (

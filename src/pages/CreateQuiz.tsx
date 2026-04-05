@@ -61,7 +61,6 @@ export default function CreateQuiz() {
   
   // Track initialization status as state to trigger re-renders correctly
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [isDraftInitialized, setIsDraftInitialized] = useState(false);
   const { initialized: storeInitialized } = useStore();
 
   // ── LOAD EXISTING QUIZ OR DRAFT ───────────────────────────────────────────
@@ -88,59 +87,13 @@ export default function CreateQuiz() {
         setIsPublic(quiz.isPublic || false);
         setHasLoaded(true);
       }
-    } 
-    
-    // Case 2: Load Draft (for new quizzes)
-    else if (!isEditing && !isDraftInitialized) {
-      const saved = localStorage.getItem('adhyayan_quiz_draft');
-      if (saved) {
-        try {
-          const draft = JSON.parse(saved);
-          if (draft.title) setTitle(draft.title);
-          if (draft.description) setDescription(draft.description);
-          if (draft.category) setCategory(draft.category);
-          if (draft.customCategoryText) setCustomCategoryText(draft.customCategoryText);
-          if (draft.difficulty) setDifficulty(draft.difficulty);
-          if (draft.timeLimit) setTimeLimit(draft.timeLimit);
-          if (draft.coverImage) setCoverImage(draft.coverImage);
-          if (draft.tags) setTags(draft.tags);
-          if (draft.questions?.length > 0) setQuestions(draft.questions);
-          if (draft.isPublic !== undefined) setIsPublic(draft.isPublic);
-        } catch (e) {
-          console.error("Failed to load draft", e);
-        }
-      }
-      setIsDraftInitialized(true);
     }
-  }, [id, isEditing, quizzes, storeInitialized, hasLoaded, isDraftInitialized]);
+  }, [id, isEditing, quizzes, storeInitialized, hasLoaded]);
 
   // Reset loading flags if ID changes
   useEffect(() => {
     setHasLoaded(false);
-    setIsDraftInitialized(false);
   }, [id]);
-
-  // ── DRAFT PERSISTENCE (ONLY FOR NEW QUIZZES) ───────────────────────────────
-  useEffect(() => {
-    // ONLY save if we have finished checking for an existing draft AND we are not in edit mode
-    // We include 'isDraftInitialized' in the dependency array so it triggers as soon as the load is done
-    if (!isEditing && isDraftInitialized) {
-      const draft = { 
-        title, 
-        description, 
-        category, 
-        customCategoryText, 
-        difficulty, 
-        timeLimit, 
-        coverImage, 
-        tags, 
-        questions, 
-        isPublic, 
-        updatedAt: Date.now() 
-      };
-      localStorage.setItem('adhyayan_quiz_draft', JSON.stringify(draft));
-    }
-  }, [title, description, category, customCategoryText, difficulty, timeLimit, coverImage, tags, questions, isPublic, isEditing, isDraftInitialized]);
 
 
   // ── IMAGE UTILS ────────────────────────────────────────────────────────────
@@ -264,11 +217,6 @@ export default function CreateQuiz() {
         navigate(`/quiz-details/${id}`);
       } else {
         const newQuizId = await addQuiz(quizData);
-        try {
-          localStorage.removeItem('adhyayan_quiz_draft');
-        } catch (e) {
-          // ignore storage errors here
-        }
         navigate(`/quiz-details/${newQuizId}`);
       }
     } catch (err: any) {
@@ -295,14 +243,6 @@ export default function CreateQuiz() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {!isEditing && (
-            <button
-              onClick={() => alert('Draft saved automatically!')}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 font-medium text-sm"
-            >
-              <Save className="w-4 h-4" /> <span className="whitespace-nowrap">Save Draft</span>
-            </button>
-          )}
           <button
             onClick={handlePublish}
             disabled={isSaving}
