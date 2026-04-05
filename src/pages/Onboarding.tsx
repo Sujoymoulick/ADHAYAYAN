@@ -41,14 +41,21 @@ export default function Onboarding() {
 
         setIsSaving(true);
         try {
+            console.log('🚀 Completing onboarding...', { profession, interestedCategories });
             await completeOnboarding({
                 isFirstTimeUser,
                 profession,
                 interestedCategories
             });
-            navigate('/', { replace: true });
+            
+            // Give the store a moment to propagate state across guards
+            setTimeout(() => {
+                navigate('/dashboard', { replace: true });
+            }, 100);
+            
         } catch (err) {
-            console.error('Failed to complete onboarding:', err);
+            console.error('❌ Failed to complete onboarding:', err);
+            alert("Something went wrong while saving your profile. Please try again.");
             setIsSaving(false);
         }
     };

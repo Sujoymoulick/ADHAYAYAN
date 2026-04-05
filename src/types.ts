@@ -12,6 +12,7 @@ export interface User {
   profession?: string;
   interestedCategories?: string[];
   isOnboarded?: boolean;
+  totalScore?: number;
 }
 
 export interface Question {

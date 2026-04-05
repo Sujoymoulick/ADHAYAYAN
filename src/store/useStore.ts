@@ -277,16 +277,20 @@ export const useStore = create<AppState>()((set, get) => ({
       console.warn('❌ Backend sync failed! Falling back to base session data to prevent login loop.');
       set({ 
         currentUser: {
+          ...get().currentUser, // Preserve existing data
           id: userData.id || `temp_${Date.now()}`,
           email: userData.email,
           name: userData.name,
           avatar: userData.avatar,
-          bio: 'Passionate Learner 🚀',
-          isOnboarded: false,
-          totalScore: 0,
+          bio: userData.bio || 'Passionate Learner 🚀',
+          isOnboarded: userData.isOnboarded ?? get().currentUser?.isOnboarded ?? false,
+          isFirstTimeUser: userData.isFirstTimeUser ?? get().currentUser?.isFirstTimeUser ?? true,
+          profession: userData.profession ?? get().currentUser?.profession ?? '',
+          interestedCategories: userData.interestedCategories ?? get().currentUser?.interestedCategories ?? [],
+          totalScore: userData.totalScore || get().currentUser?.totalScore || 0,
           passwordHash: '',
-          badges: [],
-          createdAt: Date.now()
+          badges: userData.badges || get().currentUser?.badges || [],
+          createdAt: userData.createdAt || get().currentUser?.createdAt || Date.now()
         } as User,
         isAuthLoading: false 
       });
