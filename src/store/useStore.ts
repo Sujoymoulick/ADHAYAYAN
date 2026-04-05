@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { User, Quiz, Score } from '../types';
 import { supabase } from '../lib/supabase';
  
- const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
+  // Dynamic API detection for Vercel/Production
+  const rawApiUrl = (import.meta as any).env?.VITE_API_URL || '';
+  const API_BASE = rawApiUrl.startsWith('http') ? rawApiUrl : window.location.origin;
 
 // Helper to convert snake_case (DB) to camelCase (Frontend) for Realtime payloads
 const snakeToCamel = (obj: any): any => {

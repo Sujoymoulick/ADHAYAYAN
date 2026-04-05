@@ -63,13 +63,20 @@ const PORT = 3000;
   // 2. Middleware
   app.use(express.json());
 
-  console.log('🔍 Server running with Supabase Auth integration.');
-  console.log('   - SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Present' : '❌ MISSING');
+  console.log('🔍 Server initializing...');
+  console.log('   - SUPABASE_URL:', (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) ? '✅ Present' : '❌ MISSING');
+  console.log('   - SUPABASE_ANON_KEY:', (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) ? '✅ Present' : '❌ MISSING');
+  console.log('   - SUPABASE_SERVICE_ROLE_KEY:', (process.env.SUPABASE_SERVICE_ROLE_KEY) ? '✅ Present' : '❌ MISSING');
 
 
   // 3. API Health Check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      env: process.env.VERCEL ? 'production (vercel)' : 'development',
+      dbReady: !!supabase 
+    });
   });
 
   // AI Question Generation (Gemini)
@@ -421,6 +428,12 @@ Rules:
       const { id, email, name, avatar, isOnboarded, isFirstTimeUser, profession, interestedCategories } = req.body;
       if (!id || !email) return res.status(400).json({ error: 'User ID and email are required' });
 
+      // Safety check: Ensure supabase admin client is available
+      if (!supabase) {
+        console.error('❌ Supabase Admin Client not initialized! Check SUPABASE_SERVICE_ROLE_KEY.');
+        return res.status(500).json({ error: 'Database connection error' });
+      }
+
       // Build upsert object with optional fields
       const upsertData: any = {
         id,
@@ -430,7 +443,7 @@ Rules:
         last_login: new Date().toISOString()
       };
 
-      // Only include onboarding fields if they are provided (to avoid overwriting with null)
+      // Only include onboarding fields if they are provided
       if (isOnboarded !== undefined) upsertData.is_onboarded = isOnboarded;
       if (isFirstTimeUser !== undefined) upsertData.is_first_time_user = isFirstTimeUser;
       if (profession !== undefined) upsertData.profession = profession;
@@ -441,7 +454,11 @@ Rules:
         .upsert(upsertData, { onConflict: 'id' })
         .select()
         .single();
-      if (error) throw error;
+        
+      if (error) {
+        console.error('❌ User Sync DB Error:', error.message);
+        throw error;
+      }
 
       res.json({
         success: true,
