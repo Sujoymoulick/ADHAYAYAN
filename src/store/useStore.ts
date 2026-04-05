@@ -239,6 +239,13 @@ export const useStore = create<AppState>()((set, get) => ({
       
       if (isValidUuid) {
         try {
+          console.info('📡 Frontend: Sending sync request to backend...', {
+            url: `${API_BASE}/api/user/sync`,
+            id: userData.id,
+            email: userData.email,
+            isOnboarded: userData.isOnboarded
+          });
+
           const res = await fetch(`${API_BASE}/api/user/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -253,9 +260,10 @@ export const useStore = create<AppState>()((set, get) => ({
               interestedCategories: userData.interestedCategories
             })
           });
-          
+
           if (res.ok) {
             const { user } = await res.json();
+            console.log('✅ Frontend: Sync successful!', user);
             set(state => ({
               currentUser: user,
               isAuthLoading: false,
@@ -269,35 +277,44 @@ export const useStore = create<AppState>()((set, get) => ({
               const quizzes = await quizzesRes.json();
               set({ quizzes });
             }
-            return;
+          } else {
+            const errorText = await res.text();
+            console.error('❌ Frontend: Sync failed!', {
+              status: res.status,
+              statusText: res.statusText,
+              error: errorText
+            });
+            throw new Error(`Sync failed: ${res.statusText}`);
           }
         } catch (syncErr) {
-          console.error('⚠️ Sync failed or timeout, falling back to local Supabase profile:', syncErr);
+          console.warn('⚠️ Frontend: Sync attempt failed, using local fallback.', syncErr);
+          // Fallback: Preserve existing profile data from userData/current state
+          set({
+            currentUser: {
+              ...get().currentUser, // Preserve existing data
+              id: userData.id || `temp_${Date.now()}`,
+              email: userData.email,
+              name: userData.name || userData.email?.split('@')[0] || 'User',
+              avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email}`,
+              bio: userData.bio || get().currentUser?.bio || 'Passionate Learner 🚀',
+              isOnboarded: userData.isOnboarded ?? get().currentUser?.isOnboarded ?? false,
+              isFirstTimeUser: userData.isFirstTimeUser ?? get().currentUser?.isFirstTimeUser ?? true,
+              profession: userData.profession ?? get().currentUser?.profession ?? '',
+              interestedCategories: userData.interestedCategories ?? get().currentUser?.interestedCategories ?? [],
+              totalScore: userData.totalScore ?? get().currentUser?.totalScore ?? 0,
+              passwordHash: '',
+              badges: userData.badges ?? get().currentUser?.badges ?? [],
+              createdAt: userData.createdAt ?? get().currentUser?.createdAt ?? Date.now()
+            } as User,
+            isAuthLoading: false
+          });
         }
+      } else {
+        console.warn('⚠️ Frontend: Skipping sync due to invalid UUID.');
+        set({ isAuthLoading: false });
       }
-
-      console.warn('❌ Backend sync failed! Falling back to base session data to prevent login loop.');
-      set({ 
-        currentUser: {
-          ...get().currentUser, // Preserve existing data
-          id: userData.id || `temp_${Date.now()}`,
-          email: userData.email,
-          name: userData.name,
-          avatar: userData.avatar,
-          bio: userData.bio || 'Passionate Learner 🚀',
-          isOnboarded: userData.isOnboarded ?? get().currentUser?.isOnboarded ?? false,
-          isFirstTimeUser: userData.isFirstTimeUser ?? get().currentUser?.isFirstTimeUser ?? true,
-          profession: userData.profession ?? get().currentUser?.profession ?? '',
-          interestedCategories: userData.interestedCategories ?? get().currentUser?.interestedCategories ?? [],
-          totalScore: userData.totalScore || get().currentUser?.totalScore || 0,
-          passwordHash: '',
-          badges: userData.badges || get().currentUser?.badges || [],
-          createdAt: userData.createdAt || get().currentUser?.createdAt || Date.now()
-        } as User,
-        isAuthLoading: false 
-      });
     } catch (err) {
-      console.error('❌ Authentication flow error:', err);
+      console.error('❌ Frontend: loginWithOAuth critical error:', err);
       set({ currentUser: null, isAuthLoading: false });
     }
   },

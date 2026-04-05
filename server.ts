@@ -63,9 +63,14 @@ const PORT = 3000;
   app.use(express.json());
 
   console.log('🔍 Server initializing...');
-  console.log('   - SUPABASE_URL:', (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) ? '✅ Present' : '❌ MISSING');
-  console.log('   - SUPABASE_ANON_KEY:', (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) ? '✅ Present' : '❌ MISSING');
-  console.log('   - SUPABASE_SERVICE_ROLE_KEY:', (process.env.SUPABASE_SERVICE_ROLE_KEY) ? '✅ Present' : '❌ MISSING');
+  try {
+    console.log('   - SUPABASE_URL:', (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) ? '✅ Present' : '❌ MISSING');
+    console.log('   - SUPABASE_ANON_KEY:', (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) ? '✅ Present' : '❌ MISSING');
+    console.log('   - SUPABASE_SERVICE_ROLE_KEY:', (process.env.SUPABASE_SERVICE_ROLE_KEY) ? '✅ Present' : '❌ MISSING');
+    console.log('   - DB Client Status:', supabase ? '✅ Initialized' : '⚠️ Ready for Connection');
+  } catch (err) {
+    console.warn('⚠️ Warning during log initialization:', err);
+  }
 
 
   // 3. API Health Check
@@ -448,6 +453,8 @@ Rules:
       if (profession !== undefined) upsertData.profession = profession;
       if (interestedCategories !== undefined) upsertData.interested_categories = interestedCategories;
 
+      console.log('📡 Backend: Attempting DB upsert...', { table: 'profiles', id: upsertData.id });
+
       const { data: profile, error } = await supabase
         .from('profiles')
         .upsert(upsertData, { onConflict: 'id' })
@@ -455,9 +462,16 @@ Rules:
         .single();
         
       if (error) {
-        console.error('❌ User Sync DB Error:', error.message);
+        console.error('❌ Backend: User Sync DB Error!', {
+          code: error.code,
+          message: error.message,
+          hint: error.hint,
+          details: error.details
+        });
         throw error;
       }
+
+      console.log('✅ Backend: DB upsert successful!', { id: profile.id, email: profile.email });
 
       res.json({
         success: true,
